@@ -13,6 +13,13 @@ from redbot.core.utils.chat_formatting import *
 import rpadutils
 from rpadutils import CogSettings
 
+def mod_help(self, ctx, help_type):
+    hs = getattr(self, help_type)
+    return self.format_text_for_context(ctx, hs).format(ctx) if hs else hs
+
+commands.Command.format_help_for_context = lambda s, c: mod_help(s, c, "help")
+commands.Command.format_shortdoc_for_context = lambda s, c: mod_help(s, c, "short_doc")
+
 TIMESTAMP_FORMAT = '%Y-%m-%d %X'  # YYYY-MM-DD HH:MM:SS
 PATH_LIST = ['data', 'sqlactivitylog']
 PATH = os.path.join(*PATH_LIST)
@@ -233,7 +240,7 @@ class SqlActivityLogger(commands.Cog):
     @exlog.command()
     @commands.guild_only()
     async def user(self, ctx, user: discord.User, count=10):
-        """exlog user tactical_retreat 100
+        """exlog user "{0.author.name}" 100
 
         List of messages for a user across all channels.
         Count is optional, with a low default and a maximum value.
@@ -283,7 +290,7 @@ class SqlActivityLogger(commands.Cog):
     @exlog.command()
     @commands.guild_only()
     async def userchannel(self, ctx, user: discord.User, channel: discord.TextChannel, count=10):
-        """exlog userchannel tactical_retreat #general_chat 100
+        """exlog userchannel "{0.author.name}" #general_chat 100
 
         List of messages from a user in a given channel.
         Count is optional, with a low default and a maximum value.
@@ -441,7 +448,7 @@ class SqlActivityLogger(commands.Cog):
     @exlog.command()
     @commands.guild_only()
     async def userreport(self, ctx, user: discord.User, start_date: str, end_date: str, count=10):
-        """exlog userreport tactical_retreat 2017-01-01 2017-01-10
+        """exlog userreport "{0.author.name}" 2017-01-01 2017-01-10
 
         Prints a report on channel activity in the specified time period for a user.
         Be careful how you specify your dates, must match the YYYY-MM-DD format
