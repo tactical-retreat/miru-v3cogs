@@ -17,7 +17,6 @@ class PadMonitor(commands.Cog):
         while self == self.bot.get_cog('PadMonitor'):
             try:
                 await self.check_seen()
-                print('Done refreshing PadMonitor')
             except Exception as ex:
                 print("check seen loop caught exception " + str(ex))
 
@@ -54,7 +53,6 @@ class PadMonitor(commands.Cog):
                         msg += ' ({})'.format(m.name_na_override)
                 return msg
             else:
-                print('no monsters')
                 return None
 
         jp_results = process(self.settings.jp_seen(), jp_monster_map, 'JP')
