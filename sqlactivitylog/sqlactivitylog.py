@@ -1,21 +1,17 @@
-from collections import deque
-from datetime import datetime, timedelta
 import os
+import sqlite3 as lite
 import textwrap
 import timeit
+from collections import deque
+from datetime import datetime, timedelta
 
-import discord
-from discord.ext import commands
 import prettytable
 import pytz
-
-from redbot.core import checks
-import sqlite3 as lite
-
-from rpadutils import rpadutils
-from rpadutils.rpadutils import *
+from redbot.core import checks, commands
 from redbot.core.utils.chat_formatting import *
 
+import rpadutils
+from rpadutils import CogSettings
 
 TIMESTAMP_FORMAT = '%Y-%m-%d %X'  # YYYY-MM-DD HH:MM:SS
 PATH_LIST = ['data', 'sqlactivitylog']
@@ -185,7 +181,8 @@ WHERE server_id = :server_id
 class SqlActivityLogger(commands.Cog):
     """Log activity seen by bot"""
 
-    def __init__(self, bot):
+    def __init__(self, bot, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.bot = bot
         self.settings = SQLSettings("sqlactivitylog")
         self.lock = False
@@ -206,7 +203,7 @@ class SqlActivityLogger(commands.Cog):
     @commands.command()
     @checks.is_owner()
     async def rawquery(self, ctx, *, query: str):
-        await self.queryAndPrint(ctx.guild, query, {}, {})
+        await self.queryAndPrint(ctx, ctx.guild, query, {}, {})
 
     @commands.command()
     @checks.is_owner()
@@ -255,7 +252,7 @@ class SqlActivityLogger(commands.Cog):
             ('clean_content', 'Message'),
         ]
 
-        await self.queryAndPrint(server, USER_QUERY, values, column_data)
+        await self.queryAndPrint(ctx, server, USER_QUERY, values, column_data)
 
     @exlog.command()
     @commands.guild_only()
@@ -281,7 +278,7 @@ class SqlActivityLogger(commands.Cog):
             ('clean_content', 'Message'),
         ]
 
-        await self.queryAndPrint(server, CHANNEL_QUERY, values, column_data)
+        await self.queryAndPrint(ctx, server, CHANNEL_QUERY, values, column_data)
 
     @exlog.command()
     @commands.guild_only()
@@ -305,7 +302,7 @@ class SqlActivityLogger(commands.Cog):
             ('clean_content', 'Message'),
         ]
 
-        await self.queryAndPrint(server, USER_CHANNEL_QUERY, values, column_data)
+        await self.queryAndPrint(ctx, server, USER_CHANNEL_QUERY, values, column_data)
 
     @exlog.command()
     @commands.guild_only()
@@ -337,7 +334,7 @@ class SqlActivityLogger(commands.Cog):
             ('clean_content', 'Message'),
         ]
 
-        await self.queryAndPrint(server, CONTENT_QUERY, values, column_data)
+        await self.queryAndPrint(ctx, server, CONTENT_QUERY, values, column_data)
 
     @exlog.command()
     @commands.guild_only()
@@ -365,7 +362,7 @@ class SqlActivityLogger(commands.Cog):
             ('user_id', 'User'),
         ]
 
-        await self.queryAndPrint(server, WHOSAYS_QUERY, values, column_data)
+        await self.queryAndPrint(ctx, server, WHOSAYS_QUERY, values, column_data)
 
     @exlog.command()
     @commands.guild_only()
@@ -384,7 +381,7 @@ class SqlActivityLogger(commands.Cog):
         }
         column_data = []
 
-        await self.queryAndPrint(server, DAILY_REPORT_QUERY, values, column_data)
+        await self.queryAndPrint(ctx, server, DAILY_REPORT_QUERY, values, column_data)
 
     @exlog.command()
     @commands.guild_only()
@@ -410,7 +407,7 @@ class SqlActivityLogger(commands.Cog):
         }
         column_data = []
 
-        await self.queryAndPrint(server, PERIOD_REPORT_QUERY, values, column_data)
+        await self.queryAndPrint(ctx, server, PERIOD_REPORT_QUERY, values, column_data)
 
     @exlog.command()
     @commands.guild_only()
@@ -439,7 +436,7 @@ class SqlActivityLogger(commands.Cog):
         }
         column_data = []
 
-        await self.queryAndPrint(server, CHANNEL_REPORT_QUERY, values, column_data)
+        await self.queryAndPrint(ctx, server, CHANNEL_REPORT_QUERY, values, column_data)
 
     @exlog.command()
     @commands.guild_only()
@@ -468,9 +465,9 @@ class SqlActivityLogger(commands.Cog):
         }
         column_data = []
 
-        await self.queryAndPrint(server, USER_REPORT_QUERY, values, column_data)
+        await self.queryAndPrint(ctx, server, USER_REPORT_QUERY, values, column_data)
 
-    async def queryAndPrint(self, server, query, values, column_data, max_rows=MAX_LOGS * 2):
+    async def queryAndPrint(self, ctx, server, query, values, column_data, max_rows=MAX_LOGS * 2):
         before_time = timeit.default_timer()
         cursor = self.con.execute(query, values)
         rows = cursor.fetchall()
@@ -507,7 +504,7 @@ class SqlActivityLogger(commands.Cog):
                     # Assign a UTC timezone to the datetime
                     raw_value = raw_value.replace(tzinfo=pytz.utc)
                     # Change the UTC timezone to PT
-                    raw_value = NA_TZ_OBJ.normalize(raw_value)
+                    raw_value = rpadutils.NA_TZ_OBJ.normalize(raw_value)
                     value = raw_value.strftime("%F %X")
                 if col == 'channel_id':
                     channel = server.get_channel(value) if server else None

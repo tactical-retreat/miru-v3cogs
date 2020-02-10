@@ -1,18 +1,23 @@
+import asyncio
 import csv
 import difflib
 import io
+import json
+import re
 from collections import defaultdict
 
+import aiohttp
 import prettytable
-from rpadutils.rpadutils import *
-import rpadutils.rpadutils
-import redbot.core
 from redbot.core import checks
 from redbot.core import commands
+from redbot.core.utils.chat_formatting import *
+
+import rpadutils
+from rpadutils import CogSettings, safe_read_json, replace_emoji_names_with_code, clean_global_mentions
 
 global PADGLOBAL_COG
 
-DATA_EXPORT_PATH = 'data/padglobal/padglobal_data.json'
+DATA_EXPORT_PATH = 'data/padglobal/pad global_data.json'
 
 PAD_CMD_HEADER = """
 PAD Global Commands
@@ -62,14 +67,13 @@ def monster_no_to_monster(monster_no):
 class PadGlobal(commands.Cog):
     """Global PAD commands."""
 
-    def __init__(self, bot):
+    def __init__(self, bot, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         global PADGLOBAL_COG
         PADGLOBAL_COG = self
         self.bot = bot
         self.file_path = "data/padglobal/commands.json"
-        with open("data/padglobal/commands.json", "a+") as f:
-            f.seek(0)
-            self.c_commands = json.load(f)
+        self.c_commands = safe_read_json(self.file_path)
         self.settings = PadGlobalSettings("padglobal")
 
         self._export_data()
@@ -258,7 +262,7 @@ class PadGlobal(commands.Cog):
     async def padglobal(self, ctx):
         """PAD global custom commands."""
         if ctx.invoked_subcommand is None:
-            #await ctx.send_help()
+            # await ctx.send_help()
             pass
 
     @padglobal.command()
@@ -844,10 +848,10 @@ class PadGlobal(commands.Cog):
 
         try:
             async with aiohttp.ClientSession() as sess:
-              async with sess.get(source_url) as resp:
-                emoji_content = await resp.read()
-                await emoji_server.create_custom_emoji(name=emoji_name, image=emoji_content)
-                await ctx.send(inline('Done creating emoji named {}'.format(emoji_name)))
+                async with sess.get(source_url) as resp:
+                    emoji_content = await resp.read()
+                    await emoji_server.create_custom_emoji(name=emoji_name, image=emoji_content)
+                    await ctx.send(inline('Done creating emoji named {}'.format(emoji_name)))
         except Exception as ex:
             await ctx.send(box('Error:\n' + str(ex)))
 
@@ -856,7 +860,7 @@ class PadGlobal(commands.Cog):
         if message.author.id == self.bot.user.id:
             return
 
-        global_ignores = {'blacklist':[]} # self.bot.get_cog('Core').global_ignores
+        global_ignores = {'blacklist': []}  # self.bot.get_cog('Core').global_ignores
         if message.author.id in global_ignores["blacklist"]:
             return False
 
@@ -1272,4 +1276,3 @@ class PadGlobalSettings(CogSettings):
         if server_id in disabled_servers:
             disabled_servers.remove(server_id)
             self.save_settings()
-

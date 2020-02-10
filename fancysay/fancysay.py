@@ -1,18 +1,15 @@
-from collections import defaultdict
-from collections import deque
-import copy
-import os
-from time import time
+import asyncio
 
-import discord
-from redbot.core import commands
-
-from rpadutils.rpadutils import *
 from redbot.core import checks
+from redbot.core import commands
+from redbot.core.utils.chat_formatting import *
+
+from rpadutils import char_to_emoji
 
 
 class FancySay(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.bot = bot
 
     @commands.group()

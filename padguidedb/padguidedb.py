@@ -1,27 +1,15 @@
 import asyncio
-from collections import defaultdict
 import concurrent.futures
-import csv
-from datetime import datetime, date
-import decimal
-import io
 import json
-import logging
-import os
 import re
 import subprocess
-import sys
 
-import discord
-from redbot.core import commands
-import prettytable
 import pymysql
-
-from rpadutils import rpadutils
-from rpadutils.rpadutils import *
-from rpadutils.rpadutils import CogSettings
 from redbot.core import checks
+from redbot.core import commands
+from redbot.core.utils.chat_formatting import *
 
+from rpadutils import CogSettings
 
 PADGUIDEDB_COG = None
 
@@ -38,7 +26,8 @@ def is_padguidedb_admin():
 class PadGuideDb(commands.Cog):
     """PadGuide Database manipulator"""
 
-    def __init__(self, bot):
+    def __init__(self, bot, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.bot = bot
         self.settings = PadGuideDbSettings("padguidedb")
 

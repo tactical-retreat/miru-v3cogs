@@ -1,19 +1,12 @@
-from collections import defaultdict
-import io
-import os
-import re
-import traceback
-
-import discord
-from redbot.core import commands
-from google.oauth2 import service_account
+import asyncio
 
 from google.cloud import texttospeech
-
-from rpadutils.rpadutils import *
-from rpadutils.rpadutils import CogSettings
+from google.oauth2 import service_account
 from redbot.core import checks
+from redbot.core import commands
+from redbot.core.utils.chat_formatting import *
 
+from rpadutils import CogSettings
 
 try:
     if not discord.opus.is_loaded():
@@ -30,7 +23,8 @@ SPOOL_PATH = "data/speech/spool.mp3"
 class Speech(commands.Cog):
     """Speech utilities."""
 
-    def __init__(self, bot):
+    def __init__(self, bot, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.bot = bot
         self.settings = SpeechSettings("speech")
 
@@ -71,9 +65,9 @@ class Speech(commands.Cog):
             await ctx.send(inline('Command is too long'))
             return
 
-        await self.speak(channel, text) 
+        await self.speak(ctx, channel, text)
 
-    async def speak(self, channel, text: str):
+    async def speak(self, ctx, channel, text: str):
         if self.busy:
             await ctx.send(inline('Sorry, saying something else right now'))
             return False

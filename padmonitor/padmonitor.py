@@ -1,14 +1,14 @@
-from __main__ import send_cmd_help
+import asyncio
 
-from . import rpadutils
-from .rpadutils import *
-from .rpadutils import CogSettings
-from .utils import checks
-from .utils.chat_formatting import *
+from redbot.core import commands, checks
+from redbot.core.utils.chat_formatting import *
+
+import rpadutils
 
 
 class PadMonitor(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.bot = bot
         self.settings = PadMonitorSettings("padmonitor")
 
@@ -49,7 +49,8 @@ class PadMonitor(commands.Cog):
                 msg = 'New monsters added to {}:'.format(name)
                 for m in [new_map[x] for x in delta_set]:
                     msg += '\n\tNo. {} {}'.format(m.monster_no, m.name_na)
-                    if rpadutils.containsJp(m.name_na) and m.name_na_override != m.name_na and m.name_na_override is not None:
+                    if rpadutils.containsJp(
+                            m.name_na) and m.name_na_override != m.name_na and m.name_na_override is not None:
                         msg += ' ({})'.format(m.name_na_override)
                 return msg
             else:
@@ -77,8 +78,7 @@ class PadMonitor(commands.Cog):
     @checks.mod_or_permissions(manage_guild=True)
     async def padmonitor(self, ctx):
         """PAD info monitoring"""
-        if ctx.invoked_subcommand is None:
-            await send_cmd_help(ctx)
+        pass
 
     @padmonitor.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_guild=True)
@@ -102,7 +102,7 @@ def setup(bot):
     print('done adding padinfo bot')
 
 
-class PadMonitorSettings(CogSettings):
+class PadMonitorSettings(rpadutils.CogSettings):
     def make_default_settings(self):
         config = {
             'jp_seen_ids': [],
@@ -123,7 +123,7 @@ class PadMonitorSettings(CogSettings):
             ids.append(monster_id)
             self.save_settings()
 
-    def add_na_seen(self):
+    def add_na_seen(self, monster_id: int):
         ids = self.na_seen()
         if monster_id not in ids:
             ids.append(monster_id)

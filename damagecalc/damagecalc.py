@@ -1,22 +1,22 @@
 import math
 
-import discord
+from ply import lex
 from redbot.core import commands
-from ply import lex, yacc
-from rpadutils.rpadutils import ReportableError
+
+from rpadutils import ReportableError
+
 
 class PadLexer(object):
-
     tokens = [
         'ROWS',
         'TPAS',
         'ATK',
         'OE',
-#         'ID',
+        #         'ID',
         'MULT',
 
-#         'RESIST',
-#         'DEFENCE',
+        #         'RESIST',
+        #         'DEFENCE',
 
         'ROW',
         'TPA',
@@ -96,6 +96,7 @@ class PadLexer(object):
         # pass debug=1 to enable verbose output
         self.lexer = lex.lex(module=self)
         return self.lexer
+
 
 class DamageConfig(object):
 
@@ -188,7 +189,8 @@ class DamageConfig(object):
 class DamageCalc(commands.Cog):
     """Damage calculator."""
 
-    def __init__(self, bot):
+    def __init__(self, bot, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.bot = bot
 
     @commands.group()
@@ -253,6 +255,7 @@ class DamageCalc(commands.Cog):
             config = DamageConfig(lexer)
             damage = config.calculate(all_enhanced=False)
             enhanced_damage = config.calculate(all_enhanced=True)
-            await ctx.send("```Damage (no enhanced) :  {}\nDamage (all enhanced) : {}```".format(damage, enhanced_damage))
+            await ctx.send(
+                "```Damage (no enhanced) :  {}\nDamage (all enhanced) : {}```".format(damage, enhanced_damage))
         except ReportableError as e:
             await ctx.send(e.message)

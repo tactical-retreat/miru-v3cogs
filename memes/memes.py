@@ -1,24 +1,22 @@
+import json
 import os
 import re
-import json
 
-import discord
-from discord.ext import commands
-
-from rpadutils.rpadutils import *
-from rpadutils.rpadutils import CogSettings
 from redbot.core import checks
-from padinfo.padinfo import _validate_json
+from redbot.core import commands
+from redbot.core.utils.chat_formatting import *
+
+from rpadutils import CogSettings, get_role_from_id, get_role, validate_json, safe_read_json
+
 
 class Memes(commands.Cog):
     """Custom memes."""
 
-    def __init__(self, bot):
+    def __init__(self, bot, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.bot = bot
         self.file_path = "data/memes/commands.json"
-        with open("data/memes/commands.json", "a+") as f:
-            f.seek(0)
-            self.c_commands = json.load(f)
+        self.c_commands = safe_read_json(self.file_path)
         self.settings = MemesSettings("memes")
 
     @commands.command()
@@ -207,7 +205,7 @@ def check_folders():
 
 def check_files():
     f = "data/memes/commands.json"
-    if not _validate_json(f):
+    if not validate_json(f):
         print("Creating empty commands.json...")
         json.dump({}, open(f, 'w+'))
 

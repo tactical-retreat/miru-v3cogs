@@ -1,15 +1,11 @@
-import asyncio
-from collections import defaultdict
-import os
 import re
+from collections import defaultdict
 
-import discord
-from redbot.core import commands
-
-from rpadutils.rpadutils import *
-from rpadutils.rpadutils import CogSettings
 from redbot.core import checks
+from redbot.core import commands
+from redbot.core.utils.chat_formatting import *
 
+from rpadutils import CogSettings
 
 STICKER_COG = None
 
@@ -25,7 +21,8 @@ def is_sticker_admin():
 class Stickers(commands.Cog):
     """Sticker commands."""
 
-    def __init__(self, bot):
+    def __init__(self, bot, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.bot = bot
         self.file_path = "data/stickers/commands.json"
         self.settings = StickersSettings("stickers")
@@ -139,6 +136,8 @@ class Stickers(commands.Cog):
             sticker_msg = await message.channel.send(embed=embed)
 
             await message.delete()
+
+
 #             await asyncio.sleep(15)
 #             await self.bot.delete_message(sticker_msg)
 

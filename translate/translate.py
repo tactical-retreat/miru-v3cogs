@@ -1,20 +1,16 @@
-from collections import defaultdict
-import os
-import re
-
-import discord
-from redbot.core import commands
 from googleapiclient.discovery import build
-
-from rpadutils.rpadutils import *
-from rpadutils.rpadutils import CogSettings
 from redbot.core import checks
+from redbot.core import commands
+from redbot.core.utils.chat_formatting import *
+
+from rpadutils import CogSettings, containsJp
 
 
 class Translate(commands.Cog):
     """Translation utilities."""
 
-    def __init__(self, bot):
+    def __init__(self, bot, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.bot = bot
         self.settings = TranslateSettings("translate")
 
@@ -29,8 +25,8 @@ class Translate(commands.Cog):
     @commands.Cog.listener('on_message')
     async def checkAutoTranslateJp(self, message):
         if (isinstance(message.channel, discord.abc.PrivateChannel)
-            or not self.service
-            or message.channel.id not in self.settings.autoTranslateJp()
+                or not self.service
+                or message.channel.id not in self.settings.autoTranslateJp()
                 or not containsJp(message.clean_content)):
             return
 
@@ -48,7 +44,7 @@ class Translate(commands.Cog):
     @checks.is_owner()
     async def translate(self, context):
         """Translation utilities."""
-        
+
     @commands.command(aliases=['jaus', 'jpen', 'jpus'])
     async def jaen(self, ctx, *, query):
         """Translates from Japanese to English"""
@@ -70,7 +66,7 @@ class Translate(commands.Cog):
     @translate.command()
     @checks.is_owner()
     @commands.guild_only()
-    async def autotranslatejp(self, ctx, channel: discord.Channel=None):
+    async def autotranslatejp(self, ctx, channel: discord.TextChannel = None):
         channel = channel or ctx.channel
         if channel.id in self.settings.autoTranslateJp():
             self.settings.rmAutoTranslateJp(channel.id)

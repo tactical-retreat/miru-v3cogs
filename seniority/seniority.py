@@ -1,26 +1,21 @@
-import asyncio
-from collections import deque
-from datetime import datetime, timedelta
-import discord
-from discord.ext import commands
-from discord.ext.commands import Cog
 import os
-import prettytable
-import pytz
 import re
 import sys
-import textwrap
 import timeit
+from collections import deque
+from datetime import datetime, timedelta
 
 import aioodbc
+import discord
+import prettytable
+import pytz
 from redbot.core import checks
-import sqlite3 as lite
-
-from rpadutils import rpadutils
-from rpadutils.rpadutils import *
-from rpadutils.rpadutils import CogSettings
-from redbot.core.utils.chat_formatting import *
 from redbot.core import commands
+from redbot.core.commands import Context
+from redbot.core.utils.chat_formatting import inline, pagify, box
+
+import rpadutils
+from rpadutils import CogSettings, NA_TZ_OBJ
 
 CREATE_TABLE = '''
 CREATE TABLE IF NOT EXISTS seniority(
@@ -112,7 +107,8 @@ WHERE record_date = ?
 class Seniority(commands.Cog):
     """Automatically promote people based on activity."""
 
-    def __init__(self, bot):
+    def __init__(self, bot, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.bot = bot
         self.settings = SenioritySettings("seniority")
         self.db_path = self.settings.folder + '/log.db'
@@ -274,7 +270,7 @@ class Seniority(commands.Cog):
         """List users below the remove amount."""
         server = ctx.guild
         lookback_days = self.settings.remove_lookback(server.id)
-        await self.do_print_overages(server, lookback_days, 'remove_amount', False)
+        await self.do_print_overages(ctx, server, lookback_days, 'remove_amount', False)
 
     @grant.command()
     @commands.guild_only()
@@ -282,7 +278,7 @@ class Seniority(commands.Cog):
         """List users above the warn amount."""
         server = ctx.guild
         lookback_days = self.settings.grant_lookback(server.id)
-        await self.do_print_overages(server, lookback_days, 'warn_amount', True)
+        await self.do_print_overages(ctx, server, lookback_days, 'warn_amount', True)
 
     @grant.command()
     @commands.guild_only()
@@ -290,7 +286,7 @@ class Seniority(commands.Cog):
         """List users above the grant amount."""
         server = ctx.guild
         lookback_days = self.settings.grant_lookback(server.id)
-        await self.do_print_overages(server, lookback_days, 'grant_amount', True)
+        await self.do_print_overages(ctx, server, lookback_days, 'grant_amount', True)
 
     @grant.command()
     @commands.guild_only()
@@ -349,6 +345,7 @@ class Seniority(commands.Cog):
                         raise rpadutils.ReportableError(str(ex))
 
     async def do_print_overages(self,
+                                ctx: Context,
                                 server: discord.Guild,
                                 lookback_days: int,
                                 check_name: str,
@@ -402,9 +399,11 @@ class Seniority(commands.Cog):
                                      points_greater_than: bool):
 
         if points_greater_than:
-            def point_check_fn(p): return p >= amount
+            def point_check_fn(p):
+                return p >= amount
         else:
-            def point_check_fn(p): return p < amount
+            def point_check_fn(p):
+                return p < amount
 
         users_and_points = await self.get_lookback_points(server, lookback_days)
         grant_users, ignored_users = self.check_users_for_role(
@@ -501,10 +500,7 @@ class Seniority(commands.Cog):
     @commands.guild_only()
     async def config(self, ctx):
         """Toggle Seniority configuration settings."""
-        if ctx.invoked_subcommand is None or \
-                isinstance(ctx.invoked_subcommand, commands.Group):
-            await send_cmd_help(ctx)
-            return
+        pass
 
     @config.command()
     @commands.guild_only()
@@ -706,7 +702,8 @@ class Seniority(commands.Cog):
         now_date_str = now_date()
         await self.process_message(server, channel, user, now_date_str, msg_content)
 
-    async def process_message(self, server: discord.Guild, channel: discord.TextChannel, user: discord.User, now_date_str: str, msg_content: str):
+    async def process_message(self, server: discord.Guild, channel: discord.TextChannel, user: discord.User,
+                              now_date_str: str, msg_content: str):
         if self.lock:
             return
         if server is None:
@@ -748,7 +745,8 @@ class Seniority(commands.Cog):
 
         return incremental_points
 
-    async def get_current_channel_points(self, now_date_str: str, server: discord.Guild, channel: discord.TextChannel, user: discord.User):
+    async def get_current_channel_points(self, now_date_str: str, server: discord.Guild, channel: discord.TextChannel,
+                                         user: discord.User):
         async with self.pool.acquire() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(GET_NEWMESSAGE_POINTS_QUERY, now_date_str, server.id, channel.id, user.id)
@@ -762,7 +760,8 @@ class Seniority(commands.Cog):
                 results = await cur.fetchone()
                 return results.points if results else 0
 
-    async def save_current_points(self, now_date_str: str, server: discord.Guild, channel: discord.TextChannel, user: discord.User, new_points: int):
+    async def save_current_points(self, now_date_str: str, server: discord.Guild, channel: discord.TextChannel,
+                                  user: discord.User, new_points: int):
         async with self.pool.acquire() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(REPLACE_POINTS_QUERY, now_date_str, server.id, channel.id, user.id, new_points)

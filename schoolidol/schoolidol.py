@@ -1,19 +1,12 @@
-from _collections import OrderedDict
 import difflib
 import json
-import os
-from time import time
+from _collections import OrderedDict
 
 import aiohttp
-import discord
 from redbot.core import commands
-
-from redbot.core import checks
-from redbot.core.utils.chat_formatting import pagify, box
-
-from rpadutils.rpadutils import Menu, EmojiUpdater, char_to_emoji
 from redbot.core.utils.chat_formatting import *
 
+from rpadutils import Menu, EmojiUpdater, char_to_emoji
 
 FIRST_REQ = 'https://schoolido.lu/api/cards/?page_size=100'
 
@@ -21,7 +14,8 @@ FIRST_REQ = 'https://schoolido.lu/api/cards/?page_size=100'
 class SchoolIdol(commands.Cog):
     """SchoolIdol."""
 
-    def __init__(self, bot):
+    def __init__(self, bot, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.bot = bot
         self.card_data = []
         self.menu = Menu(bot)
@@ -53,7 +47,7 @@ class SchoolIdol(commands.Cog):
             **name_to_card,
             **firstname_to_card,
             **collection_name_to_card,
-            ** collection_firstname_to_card,
+            **collection_firstname_to_card,
         }
 
     @commands.command()
@@ -100,7 +94,8 @@ class SchoolIdol(commands.Cog):
 
         try:
             result_msg, result_embed = await self.menu.custom_menu(ctx,
-                EmojiUpdater(emoji_to_embed), starting_menu_emoji, timeout=20)
+                                                                   EmojiUpdater(emoji_to_embed), starting_menu_emoji,
+                                                                   timeout=20)
             if result_msg and result_embed:
                 # Message is finished but not deleted, clear the footer
                 result_embed.set_footer(text=discord.Embed.Empty)

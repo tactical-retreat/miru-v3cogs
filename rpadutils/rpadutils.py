@@ -10,20 +10,15 @@ import urllib
 
 import aiohttp
 import backoff
-import discord
 import pytz
-from redbot.core.utils.chat_formatting import *
-from redbot.core import commands
 from discord.ext.commands import CommandNotFound
-from discord.ext.commands import converter
-from discord.ext.commands import BadArgument
-
-
-from redbot.core import Config
+from redbot.core import commands
+from redbot.core.utils.chat_formatting import *
 
 
 class RpadUtils(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.bot = bot
 
     async def on_command_error(self, ctx, error):
@@ -31,7 +26,6 @@ class RpadUtils(commands.Cog):
         if isinstance(error, ReportableError):
             msg = 'An error occurred while processing your command: {}'.format(error.message)
             await channel.send(inline(msg))
-
 
     def user_allowed(self, message):
         author = message.author
@@ -62,13 +56,13 @@ class RpadUtils(commands.Cog):
         """
         return True
 
+
 # TZ used for PAD NA
 # NA_TZ_OBJ = pytz.timezone('America/Los_Angeles')
 NA_TZ_OBJ = pytz.timezone('US/Pacific')
 
 # TZ used for PAD JP
 JP_TZ_OBJ = pytz.timezone('Asia/Tokyo')
-
 
 # https://gist.github.com/ryanmcgrath/982242
 # UNICODE RANGE : DESCRIPTION
@@ -194,6 +188,26 @@ def readJsonFile(file_path):
         return json.load(f)
 
 
+def safe_read_json(file_path):
+    try:
+        return readJsonFile(file_path)
+    except Exception as ex:
+        print('failed to read', file_path, 'got exception', ex)
+    return {}
+
+
+def ensure_json_exists(file_dir, file_name):
+    if not os.path.exists(file_dir):
+        print("Creating dir: ", file_dir)
+        os.makedirs(file_dir)
+    file_path = os.path.join(file_dir, file_name)
+    try:
+        readJsonFile(file_path)
+    except:
+        print('File missing or invalid json:', file_path)
+        writeJsonFile(file_path, {})
+
+
 @backoff.on_exception(backoff.expo, aiohttp.ClientError, max_time=60)
 @backoff.on_exception(backoff.expo, aiohttp.ServerDisconnectedError, max_time=60)
 async def async_cached_dadguide_request(file_path, file_url, expiry_secs):
@@ -246,6 +260,7 @@ class Forbidden():
 def default_check(payload):
     return not payload.member.bot
 
+
 class EmojiUpdater(object):
     # a pass-through class that does nothing to the emoji dictionary
     # or to the selected emoji
@@ -285,9 +300,9 @@ class Menu():
     async def reaction_delete_message(self, bot, ctx, message):
         await message.delete()
 
-#     def perms(self, ctx):
-#         user = ctx.guild.get_member(int(self.bot.user.id))
-#         return ctx.channel.permissions_for(user)
+    #     def perms(self, ctx):
+    #         user = ctx.guild.get_member(int(self.bot.user.id))
+    #         return ctx.channel.permissions_for(user)
 
     async def custom_menu(self, ctx, emoji_to_message, selected_emoji, **kwargs):
         """Creates and manages a new menu
@@ -344,7 +359,7 @@ class Menu():
                 message = await self.show_menu(ctx, message, new_message_content)
             else:
                 await self.show_menu(ctx, message, new_message_content)
-                
+
         if reactions_required:
             for e in emoji_to_message.emoji_dict:
                 try:
@@ -354,9 +369,9 @@ class Menu():
                     pass
 
         def check(payload):
-            return kwargs.get('check', default_check)(payload) and\
-                   str(payload.emoji.name) in list(emoji_to_message.emoji_dict.keys()) and\
-                   payload.user_id == ctx.author.id and\
+            return kwargs.get('check', default_check)(payload) and \
+                   str(payload.emoji.name) in list(emoji_to_message.emoji_dict.keys()) and \
+                   payload.user_id == ctx.author.id and \
                    payload.message_id == message.id
 
         if not message:
@@ -432,34 +447,36 @@ def char_to_emoji(c):
 ##############################
 # Hack to fix discord.py
 ##############################
-class UserConverter2(converter.IDConverter):
-    @asyncio.coroutine
-    def convert(self, ctx, argument):
-        message = ctx.message
-        bot = ctx.bot
-        match = self._get_id_match(argument) or re.match(r'<@!?([0-9]+)>$', argument)
-        server = message.guild
-        result = None
-        if match is None:
-            # not a mention...
-            if server:
-                result = server.get_member_named(argument)
-            else:
-                result = _get_from_servers(bot, 'get_member_named', argument)
-        else:
-            user_id = match.group(1)
-            if server:
-                result = yield from bot.fetch_user(int(user_id))
-            else:
-                result = _get_from_servers(bot, 'get_member', user_id)
+# TODO: check if this is still needed
+# class UserConverter2(converter.IDConverter):
+#     @asyncio.coroutine
+#     def convert(self, ctx, argument):
+#         message = ctx.message
+#         bot = ctx.bot
+#         match = self._get_id_match(argument) or re.match(r'<@!?([0-9]+)>$', argument)
+#         server = message.guild
+#         result = None
+#         if match is None:
+#             # not a mention...
+#             if server:
+#                 result = server.get_member_named(argument)
+#             else:
+#                 result = _get_from_servers(bot, 'get_member_named', argument)
+#         else:
+#             user_id = match.group(1)
+#             if server:
+#                 result = yield from bot.fetch_user(int(user_id))
+#             else:
+#                 result = _get_from_servers(bot, 'get_member', user_id)
+#
+#         if result is None:
+#             raise BadArgument('Member "{}" not found'.format(argument))
+#
+#         return result
+#
+#
+# converter.UserConverter = UserConverter2
 
-        if result is None:
-            raise BadArgument('Member "{}" not found'.format(argument))
-
-        return result
-
-
-converter.UserConverter = UserConverter2
 
 ##############################
 # End hack to fix discord.py
@@ -564,7 +581,7 @@ def intify(iterable):
                 iterable[int(item)] = intify(iterable[item])
             except:
                 iterable[item] = intify(iterable[item])
-    elif isinstance(iterable, (list,tuple)):
+    elif isinstance(iterable, (list, tuple)):
         for item in iterable:
             if intify(item) != item:
                 iterable.append(intify(item))
@@ -648,6 +665,7 @@ def get_pdx_id(m):
         pdx_id = PDX_JP_ADJUSTMENTS.get(pdx_id, pdx_id)
     return pdx_id
 
+
 def get_pdx_id_dadguide(m):
     pdx_id = m.monster_no_na
     if int(m.monster_id) == m.monster_no_jp:
@@ -663,14 +681,14 @@ async def await_and_remove(bot, react_msg, listen_user, delete_msgs=None, emoji=
         return
 
     def check(payload):
-        return str(payload.emoji.name) == emoji and\
-               payload.user_id == listen_user.id and\
+        return str(payload.emoji.name) == emoji and \
+               payload.user_id == listen_user.id and \
                payload.message_id == react_msg.id
 
     try:
         p = await bot.wait_for('add_reaction', check=check, timeout=timeout)
     except:
-        #Expected after {timeout} seconds
+        # Expected after {timeout} seconds
         p = None
 
     if p is None:
@@ -699,3 +717,11 @@ async def translate_jp_en(bot, jp_text):
     if not translate_cog:
         return None
     return await run_in_loop(bot, translate_cog.translate_jp_en, jp_text)
+
+
+def validate_json(fp):
+    try:
+        json.load(open(fp))
+        return True
+    except:
+        return False

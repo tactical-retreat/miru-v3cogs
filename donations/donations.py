@@ -1,17 +1,12 @@
-from collections import defaultdict
-import difflib
-import os
+import json
 import random
 import re
 
-import discord
-from redbot.core import commands
-from numpy.doc import glossary
-
-from rpadutils.rpadutils import *
-from rpadutils.rpadutils import CogSettings
 from redbot.core import checks
+from redbot.core import commands
+from redbot.core.utils.chat_formatting import *
 
+from rpadutils import CogSettings, clean_global_mentions
 
 DONATE_MSG = """
 To donate to cover bot hosting fees you can use one of:
@@ -32,7 +27,7 @@ DEFAULT_INSULTS = {
     'miru_references': [
         'Are you talking to me you piece of shit?',
     ],
-    'insults':  [
+    'insults': [
         'You are garbage.',
         'Kill yourself.',
     ]
@@ -52,17 +47,22 @@ def roll(chance: int):
 class Donations(commands.Cog):
     """Manages donations and perks."""
 
-    def __init__(self, bot):
+    def __init__(self, bot, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.bot = bot
         self.settings = DonationsSettings("donations")
 
-        try:    insults_json = json.load(open(INSULTS_FILE, "r"))
-        except: insults_json = {}
+        try:
+            insults_json = json.load(open(INSULTS_FILE, "r"))
+        except:
+            insults_json = {}
         self.insults_miru_reference = insults_json.get(
             'miru_references', DEFAULT_INSULTS['miru_references'])
         self.insults_list = insults_json.get('insults', DEFAULT_INSULTS['insults'])
-        try:    love_json = json.load(open(LOVE_FILE, "r"))
-        except: love_json = {}
+        try:
+            love_json = json.load(open(LOVE_FILE, "r"))
+        except:
+            love_json = {}
         self.cute_list = love_json.get('cute', DEFAULT_LOVE['cute'])
         self.sexy_list = love_json.get('sexy', DEFAULT_LOVE['sexy'])
         self.perverted_list = love_json.get('perverted', DEFAULT_LOVE['perverted'])

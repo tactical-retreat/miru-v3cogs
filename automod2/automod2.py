@@ -4,22 +4,19 @@ or blacklists to a channel.
 
 If a violation occurs, the message will be deleted and the user notified.
 """
-
+import asyncio
+import re
 from _datetime import datetime
 from collections import defaultdict
 from collections import deque
-import copy
-import discord
-from discord.ext import commands
-import os
-import prettytable
-import re
-from time import time
 
-from rpadutils import rpadutils
-from rpadutils.rpadutils import *
-from rpadutils.rpadutils import CogSettings
+import prettytable
 from redbot.core import checks
+from redbot.core import commands
+from redbot.core.utils.chat_formatting import *
+
+import rpadutils
+from rpadutils import CogSettings, boxPagifySay
 
 LOGS_PER_CHANNEL_USER = 5
 
@@ -73,8 +70,10 @@ EMOJIS = {
     ]
 }
 
+
 def linked_img_count(message):
     return len(message.embeds) + len(message.attachments)
+
 
 class CtxWrapper:
     def __init__(self, msg, bot):
@@ -83,7 +82,8 @@ class CtxWrapper:
 
 
 class AutoMod2(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.bot = bot
 
         self.settings = AutoMod2Settings("automod2")
@@ -183,7 +183,6 @@ class AutoMod2(commands.Cog):
             await ctx.send(inline('Removed blacklist config for: ' + name))
         else:
             await ctx.send(inline("Rule '{}' is undefined.".format(name)))
-
 
     @automod2.command(name="list")
     @commands.guild_only()
@@ -291,8 +290,8 @@ class AutoMod2(commands.Cog):
             msg_template = box('Your message in {} was deleted for not containing an image')
             msg = msg_template.format(message.channel.name)
             await self.deleteAndReport(message, msg)
-    
-    @commands.Cog.listener('on_message_edit')        
+
+    @commands.Cog.listener('on_message_edit')
     async def mod_message_edit(self, before, after):
         await self.mod_message(after)
 
@@ -426,7 +425,7 @@ class AutoMod2(commands.Cog):
     @watchdog.command()
     @commands.guild_only()
     @checks.mod_or_permissions(manage_guild=True)
-    async def user(self, ctx, user: discord.User, cooldown: int=None, *, reason: str=''):
+    async def user(self, ctx, user: discord.User, cooldown: int = None, *, reason: str = ''):
         """Keep an eye on a user.
 
         Whenever the user speaks in this server, a note will be printed to the watchdog
@@ -451,7 +450,7 @@ class AutoMod2(commands.Cog):
     @watchdog.command()
     @commands.guild_only()
     @checks.mod_or_permissions(manage_guild=True)
-    async def phrase(self, ctx, name: str, cooldown: int, *, phrase: str=None):
+    async def phrase(self, ctx, name: str, cooldown: int, *, phrase: str = None):
         """Keep an eye out for a phrase (regex).
 
         Whenever the regex is matched, a note will be printed to the watchdog
