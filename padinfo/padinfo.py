@@ -462,8 +462,8 @@ class PadInfo(commands.Cog):
         await ctx.send(inline('Set {} servers'.format(len(self.settings.emojiServers()))))
 
     def get_emojis(self):
-        server_ids = self.settings.emojiServers()
-        return [e for s in self.bot.guilds if s.id in server_ids for e in s.emojis]
+        server_ids = [int(sid) for sid in self.settings.emojiServers()]
+        return [e for g in self.bot.guilds if g.id in server_ids for e in g.emojis]
 
     def makeFailureMsg(self, err):
         msg = 'Lookup failed: {}.\n'.format(err)
