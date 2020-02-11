@@ -51,7 +51,7 @@ Multiple instance filters
 * convert(c1, c2) : Convert from color 1 to color 2, accepts any as entry as well
 """
 
-@rpadutils.timeout_after(0)
+@rpadutils.timeout_after(1)
 def re_timeout(re_funcs, ms):
     print('in')
     for ref in re_funcs:
@@ -486,6 +486,7 @@ class SearchConfig(object):
 
         self.filters = list()
         self.re_filters = list()
+        self.regeces = list()
 
         # Single
         if self.cd:
@@ -570,6 +571,7 @@ class SearchConfig(object):
             for ft in self.reactive:
                 text = ft.lower()
                 filters.append(lambda m, t=text: re.search(t, m.search.active))
+                self.regeces.append(text)
             self.re_filters.extend(filters)
 
         if self.board:
@@ -614,6 +616,7 @@ class SearchConfig(object):
             for ft in self.releader:
                 text = ft.lower()
                 filters.append(lambda m, t=text: re.search(t, m.search.leader))
+                self.regeces.append(text)
             self.re_filters.extend(filters)
 
         if self.name:
@@ -656,13 +659,17 @@ class SearchConfig(object):
                 return False
         return True
 
-    def check_re_filters(self, ms, ctx):
+    async def check_re_filters(self, ms, ctx):
         try:
             return re_timeout(self.re_filters, ms)
         except rpadutils.TimeoutError:
-            ctx.send("Regex took too long to compile.  Skipping.")
-            print("Timeout with patttern: {} by user {}".format(pattern, ctx.author.name))
-            return strs
+            await ctx.send("Regex took too long to compile.  Skipping regex matching.")
+            print("Timeout with patttern: \"{}\" by user {} ({})".format('", "'.join(self.regeces), ctx.author.name, ctx.author.id))
+            return ms
+        except re.error as e:
+            await ctx.send("Regex search threw error '{}'.  Skipping regex matching.".format(e.msg))
+            return ms
+
 
     def or_filters(self, filters):
         def fn(m, filters=filters):
@@ -708,21 +715,29 @@ class PadSearch(commands.Cog):
                 raise ex
         print(1)
         dg_cog = self.bot.get_cog('Dadguide')
+        if dg_cog == None:
+            await ctx.send("Dadguide cog not loaded.")
+            return
         monsters = dg_cog.database.get_all_monsters()
+
+        rmvGemFilter = self._make_search_config('remove( gem)')
+        monsters = list(filter(rmvGemFilter.check_filters, monsters))
+
         print(2)
         matched_monsters = [m for m in monsters if config.check_filters(m)]
         print(3)
         # Running regeces on a timer
-        matched_monsters = config.check_re_filters(matched_monsters, ctx)
+        matched_monsters = await config.check_re_filters(matched_monsters, ctx)
         print(4)
         # Removing entry with names that have gems in it
-        rmvGemFilter = self._make_search_config('remove( gem)')
-        matched_monsters = list(filter(rmvGemFilter.check_filters, matched_monsters))
 
         matched_monsters.sort(key=lambda m: m.monster_no_na, reverse=True)
 
         msg = 'Matched {} monsters'.format(len(matched_monsters))
         dm_required = False
+        if len(matched_monsters) == len(monsters):
+            await ctx.send("All monsters were matched.  Try with a more specific query.")
+            return
         if len(matched_monsters) > 10:
             if not config.all:
                 msg += " (limited to 10, use 'all' to get more)"
