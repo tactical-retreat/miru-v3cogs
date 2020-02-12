@@ -752,6 +752,7 @@ class PadSearch(commands.Cog):
             except:
                 # If it still failed, raise the original exception
                 raise ex
+        print(1)
         dg_cog = self.bot.get_cog('Dadguide')
         if dg_cog == None:
             await ctx.send("Dadguide cog not loaded.")
