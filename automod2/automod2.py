@@ -469,7 +469,7 @@ class AutoMod2(commands.Cog):
         try:
             re.compile(phrase)
         except Exception as ex:
-            raise rpadutils.ReportableError(str(ex))
+            raise commands.UserFeedbackCheckFailure(str(ex))
 
         if cooldown < 300:
             await ctx.send(inline('Overriding cooldown to minimum'))
