@@ -707,7 +707,7 @@ class SearchConfig(object):
             return filt_timeout(self.gl_filters, ms)
         except rpadutils.TimeoutError:
             await ctx.send("Glob took too long to compile.  Skipping glob matching.")
-            print("Timeout with patttern: \"{}\" by user {} ({})".format('", "'.join(self.regeces), ctx.author.name, ctx.author.id))
+            print("Timeout with patttern: \"{}\" by user {} ({})".format('", "'.join(self.globs), ctx.author.name, ctx.author.id))
             return ms
 
     def or_filters(self, filters):

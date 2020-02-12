@@ -4,6 +4,7 @@ import textwrap
 import timeit
 from collections import deque
 from datetime import datetime, timedelta
+import yaml
 
 import prettytable
 import pytz
@@ -13,10 +14,15 @@ from redbot.core.utils.chat_formatting import *
 import rpadutils
 from rpadutils import CogSettings
 
+def mod_help(self, ctx, help_type):
+    hs = getattr(self, help_type)
+    return self.format_text_for_context(ctx, hs).format(ctx) if hs else hs
+
+commands.Command.format_help_for_context = lambda s, c: mod_help(s, c, "help")
+commands.Command.format_shortdoc_for_context = lambda s, c: mod_help(s, c, "short_doc")
 
 def _data_file(file_name: str) -> str:
     return os.path.join(str(data_manager.cog_data_path(raw_name='sqlactivitylog')), file_name)
-
 
 TIMESTAMP_FORMAT = '%Y-%m-%d %X'  # YYYY-MM-DD HH:MM:SS
 DB_FILE = _data_file("log.db")
@@ -528,17 +534,20 @@ class SqlActivityLogger(commands.Cog):
         result_text = "{} results fetched in {}s\n{}".format(
             len(rows), round(execution_time, 2), tbl.get_string())
         for p in pagify(result_text):
-            await ctx.send(box(p))
+            await ctx.send(box(self.dirtyformat(p), 'diff'))
 
     def save_json(self):
         self.settings.save_settings()
 
-    async def on_message(self, message):
-        self.log('NEW', message, message.created_at)
+    #@commands.Cog.listener("on_message")
+    #async def on_message(self, message):
+    #    self.log('NEW', message, message.created_at)
 
+    @commands.Cog.listener("on_message_edit")
     async def on_message_edit(self, before, after):
-        self.log('EDIT', after, after.edited_at)
+        self.log('EDIT', before, after.edited_at)
 
+    @commands.Cog.listener("on_message_delete")
     async def on_message_delete(self, message):
         self.log('DELETE', message, datetime.utcnow())
 
@@ -601,6 +610,24 @@ class SqlActivityLogger(commands.Cog):
         rows = cursor.fetchall()
         return [(str(r['user_id']), str(r['content'])) for r in rows]
 
+    def dirtyformat(self, text):
+        lines = text.split('\n')
+        output = []
+        for line in lines:
+            if self.dirty_string(line) and line[0] == ' ':
+                line = '-' + line[1:]
+            output.append(line)
+        return '\n'.join(output)
+
+    def dirty_string(self, text):
+        bwpath = os.path.join(str(data_manager.bundled_data_path(self)), "badwords.yaml")
+
+        BADWORDS = yaml.safe_load(open(bwpath).read())
+
+        for swear in BADWORDS:
+            if swear in text:
+                return True
+        return False
 
 class SQLSettings(CogSettings):
     def make_default_settings(self):
