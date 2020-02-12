@@ -576,12 +576,12 @@ class SearchConfig(object):
                 lambda m: m.search.weighted_stats and m.search.weighted_stats >= self.weighted)
 
         # Multiple
-        if self.active:
-            filters = []
-            for ft in self.active:
-                text = ft.lower()
-                filters.append(lambda m, t=text: t in m.search.active)
-            self.filters.append(self.or_filters(filters))
+        #if self.active:
+        #    filters = []
+        #    for ft in self.active:
+        #        text = ft.lower()
+        #        filters.append(lambda m, t=text: t in m.search.active)
+        #    self.filters.append(self.or_filters(filters))
 
         if self.reactive:
             filters = []
@@ -591,9 +591,9 @@ class SearchConfig(object):
                 self.regeces.append(text)
             self.re_filters.extend(filters)
 
-        if self.gactive:
+        if self.active:
             filters = []
-            for ft in self.gactive:
+            for ft in self.active:
                 text = "*"+ft.lower()+"*"
                 filters.append(lambda m, t=text: fnmatch(m.search.active, t))
                 self.globs.append(text)
@@ -629,12 +629,12 @@ class SearchConfig(object):
                 filters.append(lambda m, c=text: c in m.search.hascolor)
             self.filters.append(self.or_filters(filters))
 
-        if self.leader:
-            filters = []
-            for ft in self.leader:
-                text = ft.lower()
-                filters.append(lambda m, t=text: t in m.search.leader)
-            self.filters.append(self.or_filters(filters))
+        #if self.leader:
+        #    filters = []
+        #    for ft in self.leader:
+        #        text = ft.lower()
+        #        filters.append(lambda m, t=text: t in m.search.leader)
+        #    self.filters.append(self.or_filters(filters))
 
         if self.releader:
             filters = []
@@ -644,9 +644,9 @@ class SearchConfig(object):
                 self.regeces.append(text)
             self.re_filters.extend(filters)
 
-        if self.gleader:
+        if self.leader:
             filters = []
-            for ft in self.gleader:
+            for ft in self.leader:
                 text = "*"+ft.lower()+"*"
                 filters.append(lambda m, t=text: fnmatch(m.search.leader, t))
                 self.globs.append(text)
