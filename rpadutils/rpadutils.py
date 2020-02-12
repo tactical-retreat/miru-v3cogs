@@ -715,11 +715,6 @@ def validate_json(fp):
     except:
         return False
 
-
-class TimeoutError(Exception):
-    pass
-
-
 def timeout_after(seconds=10, error_message=os.strerror(errno.ETIME)):
     def decorator(func):
         def _handle_timeout(signum, frame):

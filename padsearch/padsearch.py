@@ -694,21 +694,18 @@ class SearchConfig(object):
     async def check_re_filters(self, ms, ctx):
         try:
             return filt_timeout(self.re_filters, ms)
-        except rpadutils.TimeoutError:
-            await ctx.send("Regex took too long to compile.  Skipping regex matching.")
+        except TimeoutError:
             print("Timeout with patttern: \"{}\" by user {} ({})".format('", "'.join(self.regeces), ctx.author.name, ctx.author.id))
-            return ms
+            raise commands.UserFeedbackCheckFailure("Regex took too long to compile.  Stop trying to break the bot")
         except re.error as e:
-            await ctx.send("Regex search threw error '{}'.  Skipping regex matching.".format(e.msg))
-            return ms
+            raise commands.UserFeedbackCheckFailure("Regex search threw error '{}'".format(e.msg))
 
     async def check_glob_filters(self, ms, ctx):
         try:
             return filt_timeout(self.gl_filters, ms)
-        except rpadutils.TimeoutError:
-            await ctx.send("Glob took too long to compile.  Skipping glob matching.")
+        except TimeoutError:
             print("Timeout with patttern: \"{}\" by user {} ({})".format('", "'.join(self.globs), ctx.author.name, ctx.author.id))
-            return ms
+            raise commands.UserFeedbackCheckFailure("Glob took too long to compile.  Stop trying to break the bot")
 
     def or_filters(self, filters):
         def fn(m, filters=filters):
@@ -752,7 +749,6 @@ class PadSearch(commands.Cog):
             except:
                 # If it still failed, raise the original exception
                 raise ex
-        print(1)
         dg_cog = self.bot.get_cog('Dadguide')
         if dg_cog == None:
             await ctx.send("Dadguide cog not loaded.")
