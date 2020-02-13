@@ -273,9 +273,6 @@ class PadGlobal(commands.Cog):
     @is_padglobal_admin()
     async def padglobal(self, ctx):
         """PAD global custom commands."""
-        if ctx.invoked_subcommand is None:
-            # await ctx.send_help()
-            pass
 
     @padglobal.command()
     async def say(self, ctx, *, text: str):
