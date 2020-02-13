@@ -504,8 +504,13 @@ class TrUtils(commands.Cog):
 
         for result in to_await:
             if asyncio.iscoroutine(result):
-                result = await result
-
+                try:
+                    result = await result
+                except Exception as e:
+                    await ctx.send(box('{}: {}'.format(type(e).__name__, str(e)),
+                                        lang="py"))
+            else:
+                await ctx.send(result)
     @commands.command()
     @checks.is_owner()
     async def checkimg(self, ctx, img: str):
