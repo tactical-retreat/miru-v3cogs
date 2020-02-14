@@ -5,6 +5,8 @@ import timeit
 from collections import deque
 from datetime import datetime, timedelta
 import yaml
+import traceback
+import asyncio
 
 import prettytable
 import pytz
@@ -126,28 +128,6 @@ SELECT * FROM (
 ORDER BY timestamp ASC
 '''
 
-WHOSAYS_QUERY = '''
-SELECT user_id, count(*)
-FROM messages INDEXED BY idx_messages_server_id_clean_content
-WHERE server_id = :server_id
-  AND lower(clean_content) LIKE lower(:content_query)
-  AND user_id <> :bot_id
-  AND msg_type = 'NEW'
-GROUP BY 1
-ORDER BY 2 DESC
-LIMIT :row_count
-'''
-
-DAILY_REPORT_QUERY = '''
-SELECT DATE(timestamp) AS date, COUNT(DISTINCT user_id) AS distinct_users, count(*) AS total_messages
-FROM messages INDEXED BY idx_messages_server_id_timestamp
-WHERE server_id = :server_id
-  AND timestamp > :start_timestamp
-GROUP BY date
-ORDER BY date DESC
-LIMIT :row_count
-'''
-
 PERIOD_REPORT_QUERY = '''
 SELECT COUNT(DISTINCT user_id) AS distinct_users, count(*) AS total_messages
 FROM messages INDEXED BY idx_messages_server_id_timestamp
@@ -185,7 +165,11 @@ WHERE server_id = :server_id
   AND timestamp between :start_timestamp and :end_timestamp
 '''
 
-
+DELETE_BEFORE_QUERY = '''
+DELETE
+FROM messages
+WHERE timestamp  < :before
+'''
 class SqlActivityLogger(commands.Cog):
     """Log activity seen by bot"""
 
@@ -346,53 +330,6 @@ class SqlActivityLogger(commands.Cog):
 
     @exlog.command()
     @commands.guild_only()
-    async def whosays(self, ctx, query, count=10):
-        """exlog whosays "%:thinking:%" 10
-
-        Case-insensitive search of messages from every user/channel, grouped by user.
-        Put the query in quotes if it is more than one word.
-        Count is optional, with a low default and a maximum value.
-        The bot is excluded from results.
-        """
-        if query[0] in ('%', '_'):
-            await ctx.send('`You cannot start this query with a wildcard`')
-            return
-
-        count = min(count, MAX_LOGS)
-        server = ctx.guild
-        values = {
-            'server_id': server.id,
-            'bot_id': self.bot.user.id,
-            'row_count': count,
-            'content_query': query,
-        }
-        column_data = [
-            ('user_id', 'User'),
-        ]
-
-        await self.queryAndPrint(ctx, server, WHOSAYS_QUERY, values, column_data)
-
-    @exlog.command()
-    @commands.guild_only()
-    async def dailyreport(self, ctx, count=10):
-        """exlog dailyreport 10
-
-        Prints a report on user activity for the specified day count.
-        """
-        count = min(count, 30)
-        start_date = datetime.today() - timedelta(days=(count + 1))
-        server = ctx.guild
-        values = {
-            'server_id': server.id,
-            'row_count': count,
-            'start_timestamp': start_date,
-        }
-        column_data = []
-
-        await self.queryAndPrint(ctx, server, DAILY_REPORT_QUERY, values, column_data)
-
-    @exlog.command()
-    @commands.guild_only()
     async def periodreport(self, ctx, start_date, end_date):
         """exlog periodreport 2017-01-01 2017-01-10
 
@@ -401,8 +338,8 @@ class SqlActivityLogger(commands.Cog):
         described above.
         Start date is inclusive, end date is exclusive.
         """
-        start_date = datetime.strptime(start_date, "%Y-%m-%d")
-        end_date = datetime.strptime(end_date, "%Y-%m-%d")
+        start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+        end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d")
 
         start_date = start_date.replace(tzinfo=pytz.utc)
         end_date = end_date.replace(tzinfo=pytz.utc)
@@ -428,8 +365,8 @@ class SqlActivityLogger(commands.Cog):
         Start date is inclusive, end date is exclusive.
         """
         count = min(count, 30)
-        start_date = datetime.strptime(start_date, "%Y-%m-%d")
-        end_date = datetime.strptime(end_date, "%Y-%m-%d")
+        start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+        end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d")
 
         start_date = start_date.replace(tzinfo=pytz.utc)
         end_date = end_date.replace(tzinfo=pytz.utc)
@@ -457,8 +394,8 @@ class SqlActivityLogger(commands.Cog):
         Start date is inclusive, end date is exclusive.
         """
         count = min(count, 30)
-        start_date = datetime.strptime(start_date, "%Y-%m-%d")
-        end_date = datetime.strptime(end_date, "%Y-%m-%d")
+        start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+        end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d")
 
         start_date = start_date.replace(tzinfo=pytz.utc)
         end_date = end_date.replace(tzinfo=pytz.utc)
@@ -475,7 +412,7 @@ class SqlActivityLogger(commands.Cog):
 
         await self.queryAndPrint(ctx, server, USER_REPORT_QUERY, values, column_data)
 
-    async def queryAndPrint(self, ctx, server, query, values, column_data, max_rows=MAX_LOGS * 2):
+    async def queryAndPrint(self, ctx, server, query, values, column_data, max_rows=MAX_LOGS * 2, verbose = True):
         before_time = timeit.default_timer()
         cursor = self.con.execute(query, values)
         rows = cursor.fetchall()
@@ -531,17 +468,14 @@ class SqlActivityLogger(commands.Cog):
 
             tbl.add_row(table_row)
 
-        result_text = "{} results fetched in {}s\n{}".format(
-            len(rows), round(execution_time, 2), tbl.get_string())
-        for p in pagify(result_text):
-            await ctx.send(box(self.dirtyformat(p), 'diff'))
+        if verbose:
+            result_text = "{} results fetched in {}s\n{}".format(
+                len(rows), round(execution_time, 2), tbl.get_string())
+            for p in pagify(result_text):
+                await ctx.send(box(self.dirtyformat(p), 'diff'))
 
     def save_json(self):
         self.settings.save_settings()
-
-    #@commands.Cog.listener("on_message")
-    #async def on_message(self, message):
-    #    self.log('NEW', message, message.created_at)
 
     @commands.Cog.listener("on_message_edit")
     async def on_message_edit(self, before, after):
@@ -595,7 +529,7 @@ class SqlActivityLogger(commands.Cog):
         self.insert_timing.append(execution_time)
 
     def get_server_channel_date_msgs(self, server_id, channel_id, start_date_str):
-        start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
+        start_date = datetime.datetime.strptime(start_date_str, "%Y-%m-%d")
         start_date = start_date.replace(tzinfo=rpadutils.NA_TZ_OBJ)
         end_date = start_date + timedelta(days=1)
 
@@ -628,6 +562,28 @@ class SqlActivityLogger(commands.Cog):
             if swear in text:
                 return True
         return False
+
+    def purge(self):
+        before = datetime.datetime.today() - timedelta(days = (7 * 3))
+        values = dict(before=before)
+        cursor = self.con.execute(DELETE_BEFORE_QUERY, values)
+
+    async def ongoing(self):
+        await self.bot.wait_until_ready()
+
+        while self == self.bot.get_cog('SqlActivityLogger'):
+            try:
+                self.purge()
+            except Exception as ex:
+                print("sqlactivitylog purge failed", ex)
+                traceback.print_exc()
+
+            try:
+                await asyncio.sleep(60 * 60 * 24)
+            except Exception as ex:
+                print("sqlactivitylog data wait loop failed", ex)
+                traceback.print_exc()
+                raise ex
 
 class SQLSettings(CogSettings):
     def make_default_settings(self):
