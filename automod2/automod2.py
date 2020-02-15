@@ -668,7 +668,7 @@ class AutoMod2Settings(CogSettings):
 
         return channels[channel_id]
 
-    def getRulesForChannel(self, server_id):
+    def getRulesForChannel(self, server_id, channel_id):
         patterns = self.getPatterns(server_id)
         channel = self.getChannel(server_id, channel_id)
 
