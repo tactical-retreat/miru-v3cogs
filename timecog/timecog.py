@@ -144,7 +144,7 @@ class TimeCog(commands.Cog):
     @remindme.command()
     async def purge(self, ctx):
         """Delete all pending reminders."""
-        self.config.user(ctx.author).reminders.set([])
+        await self.config.user(ctx.author).reminders.set([])
         await ctx.send(inline("Done"))
 
     @remindme.command(aliases = ['settz'])
