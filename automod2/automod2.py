@@ -290,7 +290,10 @@ class AutoMod2(commands.Cog):
 
     @commands.Cog.listener('on_message')
     async def mod_message(self, message):
-        if message.author.id == self.bot.user.id or isinstance(message.channel, discord.abc.PrivateChannel):
+        if isinstance(message.channel, discord.abc.PrivateChannel):
+            return
+
+        if message.author.bot or not isinstance(message.author, discord.Member):
             return
 
         if message.channel.permissions_for(message.author).manage_messages:
