@@ -1157,7 +1157,7 @@ class MonsterIndex(object):
             139: ['new years', 'ny'],
             149: ['wedding', 'bride'],
             154: ['padr'],
-            175: ['valentines', 'vday'],
+            175: ['valentines', 'vday', 'v'],
         }
 
         monster_id_to_nicknames = defaultdict(set)
@@ -1258,7 +1258,7 @@ class MonsterIndex(object):
 
         awoken = lower_name.startswith('awoken') or '覚醒' in lower_name
         revo = lower_name.startswith('reincarnated') or '転生' in lower_name
-        mega = lower_name.startswith('mega woken') or '極醒' in lower_name
+        mega = lower_name.startswith('mega awoken') or '極醒' in lower_name
         awoken_or_revo_or_equip_or_mega = awoken or revo or m.is_equip or mega
 
         # These clauses need to be separate to handle things like 'Awoken Thoth' which are
