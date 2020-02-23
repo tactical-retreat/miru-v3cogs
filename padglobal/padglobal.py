@@ -17,7 +17,8 @@ from redbot.core.bot import Red
 from redbot.core.utils.chat_formatting import inline, box, pagify
 
 import rpadutils
-from rpadutils import CogSettings, safe_read_json, replace_emoji_names_with_code, clean_global_mentions
+from rpadutils import CogSettings, safe_read_json, replace_emoji_names_with_code,\
+                      clean_global_mentions, confirm_message
 
 global PADGLOBAL_COG
 
@@ -276,7 +277,7 @@ class PadGlobal(commands.Cog):
         await padinfo_cog.refresh_index()
         await ctx.send('finished reload')
 
-    @commands.group(aliases=['pdg'])
+    @commands.group(aliases=['pdg','pg'])
     @is_padglobal_admin()
     async def padglobal(self, ctx):
         """PAD global custom commands."""
@@ -287,12 +288,20 @@ class PadGlobal(commands.Cog):
         text = replace_emoji_names_with_code(self._get_emojis(), text)
         await ctx.send(text)
 
-    @padglobal.command()
+    @padglobal.command(aliases=['addalias', 'alias'])
     async def add(self, ctx, command: str, *, text: str):
-        """Adds a PAD global command
+        await self._add(ctx, command, text, True)
+
+    @padglobal.command(aliases=['editalias'])
+    async def edit(self, ctx, command: str, *, text: str):
+        await self._add(ctx, command, text, False)
+
+    async def _add(self, ctx, command, text, confirm = True):
+        """Adds or aliases a PAD global command
 
         Example:
-        !padglobal add command_name Text you want
+        [p]padglobal add command_name Text you want
+        [p]padglobal add command_name existing_command_name
         """
         command = command.lower()
         text = clean_global_mentions(text)
@@ -310,21 +319,44 @@ class PadGlobal(commands.Cog):
         if not self.c_commands:
             self.c_commands = {}
 
-        op = 'EDITED' if command in self.c_commands else 'ADDED'
+        if text in self.c_commands:
+            op = 'ALIASED'
+        elif command in self.c_commands:
+            op = 'EDITED'
+            ted = self.c_commands[command]
+            alias = False
+            while ted in self.c_commands:
+                ted = self.c_commands[ted]
+                alias = True
+            if confirm:
+                conf = await confirm_message(ctx,"Are you sure you want to edit the {}command {}?" \
+                                                .format("alias to " if alias else "", ted))
+                if not conf:
+                    return
+        else:
+            op = 'ADDED'
+
         self.c_commands[command] = text
         json.dump(self.c_commands, open(self.file_path, 'w+'))
         await ctx.send("PAD command successfully {}.".format(op))
 
-    @padglobal.command()
+    @padglobal.command(aliases=['rmalias', 'delalias'])
     async def delete(self, ctx, command: str):
-        """Deletes a PAD global command
+        """Deletes a PAD global command or alias
 
         Example:
-        !padglobal delete yourcommand"""
+        [p]padglobal delete yourcommand"""
         command = command.lower()
-        cmdlist = self.c_commands
-        if command in cmdlist:
-            cmdlist.pop(command, None)
+        if command in self.c_commands:
+            ocm = self.c_commands.copy()
+            self.c_commands.pop(command, None)
+            todel = [command]
+            while ocm != self.c_commands:
+                ocm = self.c_commands.copy()
+                for comm in ocm:
+                    if self.c_commands[comm] in todel:
+                        self.c_commands.pop(comm, None)
+                        todel.append(comm)
             json.dump(self.c_commands, open(self.file_path, 'w+'))
             await ctx.send("PAD command successfully deleted.")
         else:
@@ -734,6 +766,8 @@ class PadGlobal(commands.Cog):
                 continue
             elif w.isdigit():
                 nm, _, _ = lookup_named_monster(w)
+                if nm is None:
+                    continue
                 name = nm.group_computed_basename.title()
                 m = monster_no_to_monster(nm.monster_id)
                 grp = m.series.name
@@ -857,7 +891,10 @@ class PadGlobal(commands.Cog):
     def _get_emojis(self):
         emojis = list()
         for server_id in self.settings.emojiServers():
-            emojis.extend(self.bot.get_guild(int(server_id)).emojis)
+            try:
+                emojis.extend(self.bot.get_guild(int(server_id)).emojis)
+            except:
+                pass
         return emojis
 
     @padglobal.command()
@@ -937,6 +974,8 @@ class PadGlobal(commands.Cog):
         if final_cmd != cmd:
             await message.channel.send(inline('Corrected to: {}'.format(final_cmd)))
         result = self.c_commands[final_cmd]
+        while result in self.c_commands:
+            result = self.c_commands[result]
 
         cmd = self.format_cc(result, message)
 

@@ -651,3 +651,24 @@ def timeout_after(seconds=10, error_message=os.strerror(errno.ETIME)):
         return wraps(func)(wrapper)
 
     return decorator
+
+
+async def confirm_message(ctx, text, yemoji = "✅", nemoji = "❌", timeout = None):
+    msg = await ctx.send(text)
+    await msg.add_reaction(yemoji)
+    await msg.add_reaction(nemoji)
+    def check(reaction, user):
+        return str(reaction.emoji) in [yemoji, nemoji] \
+               and user.id == ctx.author.id \
+               and reaction.message.id == msg.id
+
+    ret = False
+    try:
+        r, u = await ctx.bot.wait_for('reaction_add', check=check, timeout=timeout)
+        if r.emoji == yemoji:
+            ret = True
+    except asyncio.TimeoutError as e:
+        pass
+
+    await msg.delete()
+    return ret

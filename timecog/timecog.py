@@ -17,10 +17,11 @@ time_at_regeces = [
     r'^\s*(?P<year>\d{4})[-/](?P<month>\d+)[-/](?P<day>\d+) ?(?P<input>.*)$',
     r'^\s*(?P<month>\d+)[-/](?P<day>\d+) ?(?P<input>.*)$',
     r'^\s*(?P<hour>\d+):(?P<minute>\d\d) ?(?P<merid>\d?pm|am)? ?(?P<input>.*)$',
+    r'^\s*(?P<hour>\d+) ?(?P<merid>\d?pm|am) ?(?P<input>.*)$',
 ]
 
 time_in_regeces = [
-    r'((?:-?\d+ ?(?:m|h|d|w|y|s)\w* ?)+)\b (.*)$'
+    r'^\s*((?:-?\d+ ?(?:m|h|d|w|y|s)\w* ?)+)\b (.*)$'
 ]
 
 DT_FORMAT = "%b %-d, %Y at %-I:%M %p"
