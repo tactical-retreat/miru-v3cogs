@@ -339,7 +339,7 @@ class Menu():
 
         try:
             p = await self.bot.wait_for('raw_reaction_add', check=check, timeout=timeout)
-        except Exception as e:
+        except asyncio.TimeoutError:
             p = None
 
         if p is None:
@@ -607,7 +607,7 @@ async def await_and_remove(bot, react_msg, listen_user, delete_msgs=None, emoji=
 
     try:
         p = await bot.wait_for('add_reaction', check=check, timeout=timeout)
-    except:
+    except asyncio.TimeoutError:
         # Expected after {timeout} seconds
         p = None
 
@@ -680,7 +680,7 @@ async def confirm_message(ctx, text, yemoji = "✅", nemoji = "❌", timeout = 1
         r, u = await ctx.bot.wait_for('reaction_add', check=check, timeout=timeout)
         if r.emoji == yemoji:
             ret = True
-    except asyncio.TimeoutError as e:
+    except asyncio.TimeoutError:
         pass
 
     await msg.delete()
