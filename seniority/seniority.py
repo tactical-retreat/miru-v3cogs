@@ -114,13 +114,17 @@ class Seniority(commands.Cog):
         self.settings = SenioritySettings("seniority")
         self.db_path = self.settings.folder + '/log.db'
         self.lock = True
+        self.pool = None
         self.insert_timing = deque(maxlen=1000)
-        print('Seniority: init complete')
 
-    def __unload(self):
+    def cog_unload(self):
         print('Seniority: unloading')
         self.lock = True
-        self.pool.close()
+        if self.pool:
+            self.pool.close()
+            self.pool = None
+        else:
+            print('unexpected error: pool was None')
         print('Seniority: unloading complete')
 
     async def init(self):
@@ -222,7 +226,7 @@ class Seniority(commands.Cog):
 
     def get_announce_channel(self, server_id):
         announce_channel_id = self.settings.announce_channel(server_id)
-        return self.bot.get_channel(int(announce_channel_id))
+        return self.bot.get_channel(announce_channel_id)
 
     @seniority.group()
     @commands.guild_only()
@@ -233,33 +237,30 @@ class Seniority(commands.Cog):
     @commands.guild_only()
     async def listbelow(self, ctx):
         """List users below the remove amount."""
-        server = ctx.guild
-        lookback_days = self.settings.remove_lookback(server.id)
-        await self.do_print_overages(ctx, server, lookback_days, 'remove_amount', False)
+        lookback_days = self.settings.remove_lookback(ctx.guild.id)
+        await self.do_print_overages(ctx, ctx.guild, lookback_days, 'remove_amount', False)
 
     @grant.command()
     @commands.guild_only()
     async def listnear(self, ctx):
         """List users above the warn amount."""
-        server = ctx.guild
-        lookback_days = self.settings.grant_lookback(server.id)
-        await self.do_print_overages(ctx, server, lookback_days, 'warn_amount', True)
+        lookback_days = self.settings.grant_lookback(ctx.guild.id)
+        await self.do_print_overages(ctx, ctx.guild, lookback_days, 'warn_amount', True)
 
     @grant.command()
     @commands.guild_only()
     async def listover(self, ctx):
         """List users above the grant amount."""
-        server = ctx.guild
-        lookback_days = self.settings.grant_lookback(server.id)
-        await self.do_print_overages(ctx, server, lookback_days, 'grant_amount', True)
+        lookback_days = self.settings.grant_lookback(ctx.guild.id)
+        await self.do_print_overages(ctx, ctx.guild, lookback_days, 'grant_amount', True)
 
     @grant.command()
     @commands.guild_only()
     async def grantnow(self, ctx):
         """List users above the grant amount."""
-        server = ctx.guild
-        lookback_days = self.settings.grant_lookback(server.id)
-        for role_id, role, amount in self.roles_and_amounts(server, 'grant_amount'):
+        guild = ctx.guild
+        lookback_days = self.settings.grant_lookback(guild.id)
+        for role_id, role, amount in self.roles_and_amounts(guild, 'grant_amount'):
             if role is None or amount <= 0:
                 continue
 
@@ -267,8 +268,8 @@ class Seniority(commands.Cog):
             await ctx.send(inline(msg))
 
             grant_users, ignored_users = await self.get_grant_ignore_users(
-                server, role, amount, lookback_days, True)
-            grant_users = [server.get_member(int(x[0])) for x in grant_users]
+                guild, role, amount, lookback_days, True)
+            grant_users = [guild.get_member(int(x[0])) for x in grant_users]
 
             cs = 5
             user_chunks = [grant_users[i:i + cs] for i in range(0, len(grant_users), cs)]
@@ -384,7 +385,7 @@ class Seniority(commands.Cog):
             async with conn.cursor() as cur:
                 await cur.execute(GET_LOOKBACK_POINTS_QUERY, server.id, lookback_date_str)
                 rows = await cur.fetchall()
-        return rows
+                return [(int(x[0]), x[1]) for x in rows]
 
     def check_users_for_role(self,
                              users_and_points,
@@ -455,7 +456,7 @@ class Seniority(commands.Cog):
     async def checktext(self, ctx, text: str):
         """Check if text is considered significant by the current config.
         """
-        is_good, cleaned_text, reason = self.check_acceptable(ctx.guild, text)
+        is_good, cleaned_text, reason = await self.check_acceptable(ctx.message, text)
         if is_good:
             await ctx.send(box('Message accepted, cleaned text:\n{}'.format(cleaned_text)))
         else:
@@ -621,10 +622,11 @@ class Seniority(commands.Cog):
         self.settings.set_min_words(server_id, words)
         await ctx.send(inline('Min word count set to {}.'.format(words)))
 
-    def check_acceptable(self, server: discord.Guild, text: str):
+    async def check_acceptable(self, message: discord.Message, text: str):
+        server = message.guild
         server_id = server.id
         if self.settings.ignore_commands(server_id):
-            if rpadutils.get_prefix(self.bot, server, text):
+            if await rpadutils.get_prefix(self.bot, message):
                 return False, text, 'Ignored command'
 
         if self.settings.ignore_room_codes(server_id):
@@ -645,54 +647,53 @@ class Seniority(commands.Cog):
 
         return True, text, 'Passed!'
 
+    @commands.Cog.listener("on_message")
     async def on_message(self, message: discord.Message):
         if message.guild is None:
             return
-        server = message.guild
-        channel = message.channel
-        user = message.author
-        msg_content = message.content
         now_date_str = now_date()
-        await self.process_message(server, channel, user, now_date_str, msg_content)
+        await self.process_message(message, now_date_str)
 
-    async def process_message(self, server: discord.Guild, channel: discord.TextChannel, user: discord.User,
-                              now_date_str: str, msg_content: str):
+    async def process_message(self, message: discord.Message, now_date_str: str):
         if self.lock:
             return
-        if server is None:
-            return
-        if user == self.bot.user.id:
+
+        guild = message.guild
+        channel = message.channel
+        user = message.author
+
+        if guild is None or message.author.id == self.bot.user.id:
             return
 
-        channel_config = self.settings.channels(server.id).get(channel.id, None)
+        channel_config = self.settings.channels(guild.id).get(channel.id, None)
         if not channel_config:
             return
 
-        acceptable, _, _ = self.check_acceptable(server, msg_content)
+        acceptable, _, _ = await self.check_acceptable(message, message.content)
         if not acceptable:
             return
 
         max_points = channel_config['max_ppd']
-        current_points = await self.get_current_channel_points(now_date_str, server, channel, user)
+        current_points = await self.get_current_channel_points(now_date_str, guild, channel, user)
         current_points = current_points or 0
 
         if current_points >= max_points:
             return
 
-        server_point_cap = self.settings.server_point_cap(server.id)
-        current_server_points = await self.get_current_server_points(now_date_str, server, user)
+        server_point_cap = self.settings.server_point_cap(guild.id)
+        current_server_points = await self.get_current_server_points(now_date_str, guild, user)
         current_server_points = current_server_points or 0
 
         if current_server_points >= server_point_cap:
             return
 
-        message_cap = self.settings.message_cap(server.id)
+        message_cap = self.settings.message_cap(guild.id)
         incremental_points = max_points / message_cap
         new_points = current_points + incremental_points
         new_points = min(new_points, max_points)
 
         before_time = timeit.default_timer()
-        await self.save_current_points(now_date_str, server, channel, user, new_points)
+        await self.save_current_points(now_date_str, guild, channel, user, new_points)
         execution_time = timeit.default_timer() - before_time
         self.insert_timing.append(execution_time)
 
