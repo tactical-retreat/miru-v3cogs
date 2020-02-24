@@ -278,7 +278,7 @@ class PadGlobal(commands.Cog):
         await padinfo_cog.refresh_index()
         await ctx.send('finished reload')
 
-    @commands.group(aliases=['pdg','pg'])
+    @commands.group()
     @is_padglobal_admin()
     async def padglobal(self, ctx):
         """PAD global custom commands."""
@@ -322,6 +322,9 @@ class PadGlobal(commands.Cog):
 
         if text in self.c_commands:
             op = 'ALIASED'
+            if self.c_commands[text] in self.c_commands:
+                await ctx.send("You cannot alias an alias")
+                return
         elif command in self.c_commands:
             op = 'EDITED'
             ted = self.c_commands[command]

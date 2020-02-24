@@ -652,7 +652,7 @@ def timeout_after(seconds=10, error_message=os.strerror(errno.ETIME)):
     return decorator
 
 
-async def confirm_message(ctx, text, yemoji = "✅", nemoji = "❌", timeout = None):
+async def confirm_message(ctx, text, yemoji = "✅", nemoji = "❌", timeout = 10):
     msg = await ctx.send(text)
     await msg.add_reaction(yemoji)
     await msg.add_reaction(nemoji)
