@@ -662,7 +662,7 @@ class PadGlobal(commands.Cog):
 
     def boss_to_text(self, ctx):
         bosses = self.settings.boss()
-        msg = '__**PAD Boss Mechanics (also check out [p]pad / [p]padfaq / [p]boards / [p]which / [p]glossary)**__'.format(ctx.prefix)
+        msg = '__**PAD Boss Mechanics (also check out {0}pad / {0}padfaq / {0}boards / {0}which / {0}glossary)**__'.format(ctx.prefix)
         for term in sorted(bosses.keys()):
             definition = bosses[term]
             msg += '\n**{}**\n{}'.format(term, definition)
@@ -670,7 +670,7 @@ class PadGlobal(commands.Cog):
 
     def boss_to_text_index(self, ctx):
         bosses = self.settings.boss()
-        msg = '__**Available PAD Boss Mechanics (also check out [p]pad / [p]padfaq / [p]boards / [p]which / [p]glossary)**__'.format(ctx.prefix)
+        msg = '__**Available PAD Boss Mechanics (also check out {0}pad / {0}padfaq / {0}boards / {0}which / {0}glossary)**__'.format(ctx.prefix)
         msg = msg + '\n' + ',\n'.join(sorted(bosses.keys()))
         return msg
 
@@ -703,7 +703,7 @@ class PadGlobal(commands.Cog):
         """Shows PAD Which Monster entries"""
 
         if term is None:
-            await ctx.author.send('__**PAD Which Monster**__ *(also check out [p]pad / [p]padfaq / [p]boards / [p]glossary)*'.format(ctx.prefix))
+            await ctx.author.send('__**PAD Which Monster**__ *(also check out {0}pad / {0}padfaq / {0}boards / {0}glossary)*'.format(ctx.prefix))
             msg = self.which_to_text()
             for page in pagify(msg):
                 await ctx.author.send(box(page))
@@ -772,18 +772,9 @@ class PadGlobal(commands.Cog):
             nm = monster_id_to_named_monster(monster_id)
             if m is None or nm is None:
                 continue
-            elif w.isdigit():
-                nm, _, _ = lookup_named_monster(w)
-                if nm is None:
-                    continue
-                name = nm.group_computed_basename.title()
-                m = monster_no_to_monster(nm.monster_id)
-                grp = m.series.name
-                monsters[grp].append(name)
-            else:
-                items.append(w)
-
-        msg = '\nGeneral:\n{}'.format(', '.join(sorted(items)))
+            name = nm.group_computed_basename.title()
+            grp = m.series.name
+            monsters[grp].append(name)
 
         tbl = prettytable.PrettyTable(['Group', 'Members'])
         tbl.hrules = prettytable.HEADER
@@ -982,7 +973,7 @@ class PadGlobal(commands.Cog):
 
         cmd = self.format_cc(result, message)
 
-        await message.channel.send(result)
+        await message.channel.send(cmd)
 
     def _lookup_command(self, cmd):
         """Returns the corrected cmd name.
@@ -1047,9 +1038,10 @@ class PadGlobal(commands.Cog):
             return str(objects[result])
         try:
             first, second = result.split(".")
-        except ValueError:
+            if first in objects:
+                return str(getattr(objects[first], second, raw_result))
+        except (ValueError, KeyError):
             return raw_result
-        return str(getattr(first, second, raw_result))
 
     @commands.command(aliases=["guides"])
     @commands.check(check_enabled)
@@ -1125,6 +1117,7 @@ class PadGlobal(commands.Cog):
 
     @padglobal.command()
     async def adddungeonguide(self, ctx, term: str, *, definition: str):
+        """Adds a dungeon guide to the [p]guide command"""
         term = term.lower()
         op = 'EDITED' if term in self.settings.dungeonGuide() else 'ADDED'
         self.settings.addDungeonGuide(term, definition)
@@ -1132,6 +1125,7 @@ class PadGlobal(commands.Cog):
 
     @padglobal.command()
     async def rmdungeonguide(self, ctx, term: str):
+        """Removes a dungeon guide from the [p]guide command"""
         term = term.lower()
         if term not in self.settings.dungeonGuide():
             await ctx.send("DungeonGuide doesn't exist.")
@@ -1142,6 +1136,7 @@ class PadGlobal(commands.Cog):
 
     @padglobal.command()
     async def addleaderguide(self, ctx, monster_id: int, *, definition: str):
+        """Adds a leader guide to the [p]guide command"""
         m = monster_id_to_monster(monster_id)
         if m != m.base_monster:
             m = m.base_monster
@@ -1154,6 +1149,7 @@ class PadGlobal(commands.Cog):
 
     @padglobal.command()
     async def rmleaderguide(self, ctx, monster_id: int):
+        """Removes a leader guide from the [p]guide command"""
         m = monster_id_to_monster(monster_id)
         if m != m.base_monster:
             m = m.base_monster
