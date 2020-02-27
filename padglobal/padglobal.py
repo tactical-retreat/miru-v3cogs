@@ -848,15 +848,11 @@ class PadGlobal(commands.Cog):
         monsters = []
         whiches = self.settings.which()
         for w in whiches:
-            if isinstance(w, int):
-                continue
-            elif isinstance(whiches[w], list) and isinstance(whiches[w], int):
-                continue
-            elif isinstance(whiches[w], list):
+            if isinstance(whiches[w], list):
                 nm, _, _ = lookup_named_monster(w)
                 name = nm.group_computed_basename.title()
                 monsters.append([name, whiches[w][1]])
-            elif w.isdigit():
+            elif isinstance(w, int):
                 nm, _, _ = lookup_named_monster(w)
                 name = nm.group_computed_basename.title()
                 monsters.append([name, "2000-01-01"])
