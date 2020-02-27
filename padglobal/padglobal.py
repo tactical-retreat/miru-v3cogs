@@ -820,7 +820,7 @@ class PadGlobal(commands.Cog):
         if m != m.base_monster:
             m = m.base_monster
             await ctx.send("I think you meant {} for {}.".format(m.monster_no_na, m.name_na))
-        name = str(m.monster_id)
+        name = m.monster_id
 
         op = 'EDITED' if name in self.settings.which() else 'ADDED'
         self.settings.addWhich(name, definition)
@@ -833,7 +833,7 @@ class PadGlobal(commands.Cog):
         if m != m.base_monster:
             m = m.base_monster
             await ctx.send("I think you meant {} for {}.".format(m.monster_no_na, m.name_na))
-        name = str(m.monster_id)
+        name = m.monster_id
 
         if name not in self.settings.which():
             await ctx.send("Which item doesn't exist.")
@@ -873,7 +873,7 @@ class PadGlobal(commands.Cog):
         msg = rpadutils.strip_right_multiline(tbl.get_string())
 
         for page in pagify(msg):
-            await ctx.author.send(box(page))
+            await ctx.send(box(page))
 
     @padglobal.command()
     @checks.is_owner()
@@ -1157,7 +1157,7 @@ class PadGlobal(commands.Cog):
         if m != m.base_monster:
             m = m.base_monster
             await ctx.send("I think you meant {} for {}.".format(m.monster_no_na, m.name_na))
-        name = str(m.monster_id)
+        name = m.monster_id
 
         op = 'EDITED' if name in self.settings.leaderGuide() else 'ADDED'
         self.settings.addLeaderGuide(name, definition)
@@ -1169,7 +1169,7 @@ class PadGlobal(commands.Cog):
         if m != m.base_monster:
             m = m.base_monster
             await ctx.send("I think you meant {} for {}.".format(m.monster_no_na, m.name_na))
-        name = str(m.monster_id)
+        name = m.monster_id
 
         if name not in self.settings.leaderGuide():
             await ctx.send("LeaderGuide doesn't exist.")

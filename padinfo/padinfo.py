@@ -165,7 +165,9 @@ class PadInfo(commands.Cog):
 
             await asyncio.sleep(60 * 60 * 1)
 
-    async def refresh_index(self):
+    @commands.command()
+    @checks.is_owner()
+    async def refresh_index(self, ctx=None):
         """Refresh the monster indexes."""
         dg_cog = self.bot.get_cog('Dadguide')
         if not dg_cog:
