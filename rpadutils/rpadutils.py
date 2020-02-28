@@ -328,10 +328,10 @@ class Menu():
                     pass
 
         def check(payload):
-            return kwargs.get('check', default_check)(payload) and \
-                   str(payload.emoji.name) in list(emoji_to_message.emoji_dict.keys()) and \
-                   payload.user_id == ctx.author.id and \
-                   payload.message_id == message.id
+            return (kwargs.get('check', default_check)(payload) and
+                    str(payload.emoji.name) in list(emoji_to_message.emoji_dict.keys()) and
+                    payload.user_id == ctx.author.id and 
+                    payload.message_id == message.id)
 
         if not message:
             raise ValueError(message, ctx)
@@ -671,9 +671,9 @@ async def confirm_message(ctx, text, yemoji = "✅", nemoji = "❌", timeout = 1
     await msg.add_reaction(yemoji)
     await msg.add_reaction(nemoji)
     def check(reaction, user):
-        return str(reaction.emoji) in [yemoji, nemoji] \
-               and user.id == ctx.author.id \
-               and reaction.message.id == msg.id
+        return (str(reaction.emoji) in [yemoji, nemoji]
+                and user.id == ctx.author.id
+                and reaction.message.id == msg.id)
 
     ret = False
     try:

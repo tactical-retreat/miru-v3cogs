@@ -219,8 +219,8 @@ class TimeCog(commands.Cog):
             req_time = req_time + timedelta(days=1)
         delta = req_time - now
 
-        msg = "There are " + fmt_hrs_mins(delta.seconds).strip() + \
-              " until " + time.strip() + " in " + now.strftime('%Z')
+        msg = ("There are " + fmt_hrs_mins(delta.seconds).strip() +
+              " until " + time.strip() + " in " + now.strftime('%Z'))
         await ctx.send(inline(msg))
 
 
