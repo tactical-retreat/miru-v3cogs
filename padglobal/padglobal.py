@@ -773,7 +773,7 @@ class PadGlobal(commands.Cog):
             if m is None or nm is None:
                 continue
             name = nm.group_computed_basename.title()
-            grp = m.series.name
+            grp = m.series.name 
             monsters[grp].append(name)
 
         tbl = prettytable.PrettyTable(['Group', 'Members'])
