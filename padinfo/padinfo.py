@@ -760,10 +760,10 @@ def monstersToLsEmbed(left_m: "DgMonster", right_m: "DgMonster"):
     description = ''
     description += '\n**{}**\n{}'.format(
         monsterToHeader(left_m, link=True),
-        left_m.leader_skill.desc if left_m.leader_skill else 'None/Missing')
+        left_m.leader_skill.desc if left_m.leader_skill else 'None')
     description += '\n**{}**\n{}'.format(
         monsterToHeader(right_m, link=True),
-        right_m.leader_skill.desc if right_m.leader_skill else 'None/Missing')
+        right_m.leader_skill.desc if right_m.leader_skill else 'None')
     embed.description = description
 
     return embed
@@ -859,7 +859,7 @@ def monsterToEmbed(m: "DgMonster", emoji_list):
     embed.description = '{}\n{}'.format(awakenings_row, killers_row)
 
     active_header = 'Active Skill'
-    active_body = 'None/Missing'
+    active_body = 'None'
     active_skill = m.active_skill
     if active_skill:
         active_header = 'Active Skill ({} -> {})'.format(active_skill.turn_max,
@@ -868,7 +868,7 @@ def monsterToEmbed(m: "DgMonster", emoji_list):
     embed.add_field(name=active_header, value=active_body, inline=False)
 
     leader_skill = m.leader_skill
-    ls_row = m.leader_skill.desc if leader_skill else 'None/Missing'
+    ls_row = m.leader_skill.desc if leader_skill else 'None'
     ls_header = 'Leader Skill'
     if leader_skill:
         hp, atk, rcv, resist = m.leader_skill.data
