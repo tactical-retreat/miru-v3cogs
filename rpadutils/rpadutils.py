@@ -421,7 +421,7 @@ def fix_emojis_for_server(emoji_list, msg_text):
     # For each unique looking emoji thing
     for m in set(matches):
         # Create a regex for that emoji replacing the digit
-        m_re = re.sub(r'\d', r'\d', m)
+        m_re = re.sub(r'\d', r'&', m).rstrip("~")
         for em in emoji_list:
             # If the current emoji matches the regex, force a replacement
             emoji_code = str(em)
