@@ -71,7 +71,7 @@ def lookup_named_monster(query: str):
     padinfo_cog = PADGLOBAL_COG.bot.get_cog('PadInfo')
     if padinfo_cog is None:
         raise Exception("Cog not Loaded")
-    nm, err, debug_info = padinfo_cog._findMonster(query)
+    nm, err, debug_info = padinfo_cog._findMonster(str(query))
     return nm, err, debug_info
 
 
@@ -776,7 +776,7 @@ class PadGlobal(commands.Cog):
         if m != m.base_monster:
             m = m.base_monster
             await ctx.send("I think you meant {} for {}.".format(m.monster_no_na, m.name_na))
-        name = str(m.monster_id)
+        name = m.monster_id
 
         op = 'EDITED' if name in self.settings.which() else 'ADDED'
         self.settings.addWhich(name, definition)
@@ -789,7 +789,7 @@ class PadGlobal(commands.Cog):
         if m != m.base_monster:
             m = m.base_monster
             await ctx.send("I think you meant {} for {}.".format(m.monster_no_na, m.name_na))
-        name = str(m.monster_id)
+        name = m.monster_id
 
         if name not in self.settings.which():
             await ctx.send("Which item doesn't exist.")
@@ -804,26 +804,22 @@ class PadGlobal(commands.Cog):
         monsters = []
         whiches = self.settings.which()
         for w in whiches:
-            if isinstance(w, int):
+            w %= 10000
+            nm, e, s = lookup_named_monster(w)
+            if not nm:
+                print(w,e,s)
                 continue
-            elif isinstance(whiches[w], list) and isinstance(whiches[w], int):
-                continue
-            elif isinstance(whiches[w], list):
-                nm, _, _ = lookup_named_monster(w)
-                name = nm.group_computed_basename.title()
+            name = nm.group_computed_basename.title()
+            if isinstance(whiches[w], list):
                 monsters.append([name, whiches[w][1]])
-            elif w.isdigit():
-                nm, _, _ = lookup_named_monster(w)
-                name = nm.group_computed_basename.title()
-                monsters.append([name, "2000-01-01"])
             else:
-                items.append([w, "2000-01-01"])
+                monsters.append([name, "2000-01-01"])
 
         tbl = prettytable.PrettyTable(['Monster', 'Timestamp'])
         tbl.hrules = prettytable.HEADER
         tbl.vrules = prettytable.NONE
         tbl.align = "l"
-        for mon in sorted(monsters, key=lambda x: x[1]):
+        for mon in sorted(sorted(monsters), key=lambda x: x[1]):
             tbl.add_row(mon)
 
         msg = rpadutils.strip_right_multiline(tbl.get_string())
