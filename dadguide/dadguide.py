@@ -56,7 +56,7 @@ class Dadguide(commands.Cog):
     def __init__(self, bot: Red, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.bot = bot
-        self._is_ready = asyncio.Event(loop=self.bot.loop)
+        self._is_ready = asyncio.Event()
 
         self.settings = DadguideSettings("dadguide")
 
@@ -74,14 +74,13 @@ class Dadguide(commands.Cog):
         self.database = load_database(None)
         self.index = None  # type: MonsterIndex
 
-    @asyncio.coroutine
-    def wait_until_ready(self):
+    async def wait_until_ready(self):
         """Wait until the Dadguide cog is ready.
 
         Call this from other cogs to wait until Dadguide finishes refreshing its database
         for the first time.
         """
-        yield from self._is_ready.wait()
+        return await self._is_ready.wait()
 
     def create_index(self, accept_filter=None):
         """Exported function that allows a client cog to create a monster index"""
@@ -273,6 +272,15 @@ class EvoType(Enum):
     UvoAwoken = 2
     UuvoReincarnated = 3
 
+class TrueEvoType(Enum):
+    """Evo types unsupported by DadGuide."""
+    Base = -1
+    Normal = 0
+    Ultimate = 1
+    Reincarnated = 2
+    Assist = 3
+    Pixel = 4
+    Super_Reincarnated = 5
 
 class Server(Enum):
     JP = 0
@@ -875,6 +883,26 @@ class DgMonster(DadguideItem):
         return self.evo_from.evolution_type if self.evo_from else EvoType.Base
 
     @property
+    def true_evo_type(self):
+        print([dgi.monster_id for dgi in self.mats_for_evo])
+        if self == self.base_monster:
+            return TrueEvoType.Base
+        elif 5077 in [dgi.monster_id for dgi in self.mats_for_evo]:
+            return TrueEvoType.Super_Reincarnated
+        elif 3826 in [dgi.monster_id for dgi in self.mats_for_evo]:
+            return TrueEvoType.Pixel
+        elif self.is_equip:
+            return TrueEvoType.Assist
+        elif self.cur_evo_type == EvoType.UuvoReincarnated:
+            return TrueEvoType.Reincarnated
+        elif self.cur_evo_type == EvoType.UvoAwoken:
+            return TrueEvoType.Ultimate
+        else:
+            return TrueEvoType.Normal
+
+
+
+    @property
     def mats_for_evo(self):
         if self.evo_from is None:
             return []
@@ -1069,7 +1097,7 @@ class MonsterSearchHelper(object):
 
         txt = active_desc
         if 'row' in txt:
-            parts = re.split('\Wand\W|;\W', txt)
+            parts = re.split(r'\Wand\W|;\W', txt)
             for i in range(0, len(parts)):
                 if 'row' in parts[i]:
                     self.row_convert.append(strip_next_clause(
@@ -1077,7 +1105,7 @@ class MonsterSearchHelper(object):
 
         txt = active_desc
         if 'column' in txt:
-            parts = re.split('\Wand\W|;\W', txt)
+            parts = re.split(r'\Wand\W|;\W', txt)
             for i in range(0, len(parts)):
                 if 'column' in parts[i]:
                     self.column_convert.append(strip_next_clause(
@@ -1088,7 +1116,7 @@ class MonsterSearchHelper(object):
         change_txt = 'change '
         if not convert_done and change_txt in active_desc and 'orb' in active_desc:
             txt = active_desc
-            parts = re.split('\Wand\W|;\W', txt)
+            parts = re.split(r'\Wand\W|;\W', txt)
             for i in range(0, len(parts)):
                 parts[i] = strip_prev_clause(parts[i], change_txt) if change_txt in parts[i] else ''
 
@@ -1250,6 +1278,7 @@ class MonsterIndex(object):
 
         awoken = lower_name.startswith('awoken') or '覚醒' in lower_name
         revo = lower_name.startswith('reincarnated') or '転生' in lower_name
+        srevo = lower_name.startswith('super reincarnated') or '超転生' in lower_name
         mega = lower_name.startswith('mega awoken') or '極醒' in lower_name
         awoken_or_revo_or_equip_or_mega = awoken or revo or m.is_equip or mega
 
@@ -1267,6 +1296,10 @@ class MonsterIndex(object):
             prefixes.add('mega')
             prefixes.add('mega awoken')
             prefixes.add('awoken')
+
+        if srevo:
+            prefixes.add('srevo')
+            prefixes.add('super reincarnated')
 
         # Prefixes for evo type
         if m.cur_evo_type == EvoType.Base:

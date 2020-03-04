@@ -801,6 +801,9 @@ def monsterToAcquireString(m: "DgMonster"):
         acquire_text = 'MP Shop Evo'
     return acquire_text
 
+def monsterToTrueEvoTypeString(m: "DgMonster"):
+    tet = m.true_evo_type
+    return tet.name.replace("_"," ") if tet.value > 1 else ""
 
 def match_emoji(emoji_list, name):
     for e in emoji_list:
@@ -814,6 +817,7 @@ def monsterToEmbed(m: "DgMonster", emoji_list):
 
     info_row_1 = monsterToTypeString(m)
     acquire_text = monsterToAcquireString(m)
+    tet_text = monsterToTrueEvoTypeString(m)
 
     info_row_2 = '**Rarity** {}\n**Cost** {}'.format(m.rarity, m.cost)
     if acquire_text:
@@ -822,6 +826,8 @@ def monsterToEmbed(m: "DgMonster", emoji_list):
         info_row_2 += '\n**Inheritable**'
     else:
         info_row_2 += '\n**Not inheritable**'
+    if tet_text:
+        info_row_2 += '\n**{}**'.format(tet_text)
 
     embed.add_field(name=info_row_1, value=info_row_2)
 

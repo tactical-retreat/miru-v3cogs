@@ -170,7 +170,7 @@ class Memes(commands.Cog):
         return False
 
     def format_cc(self, command, message):
-        results = re.findall("\{([^}]+)\}", command)
+        results = re.findall(r"\{([^}]+)\}", command)
         for result in results:
             param = self.transform_parameter(result, message)
             command = command.replace("{" + result + "}", param)
