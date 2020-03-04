@@ -62,7 +62,7 @@ class Calculator(commands.Cog):
         except subprocess.TimeoutExpired:
             await ctx.send(inline('Command took too long to execute. Quit trying to break the bot.'))
             return
-        ecept
+
         if len(str(calc_result)) > 1024:
             await ctx.send(inline("The result is obnoxiously long!  Try a request under 1k characters!"))
         elif len(str(calc_result)) > 0:

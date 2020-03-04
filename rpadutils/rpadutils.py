@@ -5,6 +5,7 @@ import inspect
 import json
 import os
 import re
+import io
 import signal
 import time
 import unicodedata
@@ -685,3 +686,13 @@ async def confirm_message(ctx, text, yemoji = "✅", nemoji = "❌", timeout = 1
 
     await msg.delete()
     return ret
+
+class CtxIO:
+    def __init__(self, ctx):
+        self.ctx = ctx
+
+    def read(self):
+        raise io.UnsupportedOperation("read")
+
+    def write(self, data):
+        asyncio.run_coroutine_threadsafe(self.ctx.send(data))
