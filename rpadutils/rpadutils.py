@@ -137,11 +137,11 @@ def should_download(file_path, expiry_secs):
 
     ftime = os.path.getmtime(file_path)
     file_age = time.time() - ftime
-    print("for " + file_path + " got " + str(ftime) + ", age " +
-          str(file_age) + " against expiry of " + str(expiry_secs))
+    #print("for " + file_path + " got " + str(ftime) + ", age " +
+    #      str(file_age) + " against expiry of " + str(expiry_secs))
 
     if file_age > expiry_secs:
-        print("file too old, download it")
+        print("file {} too old, download it".format(file_path))
         return True
     else:
         return False
@@ -330,7 +330,7 @@ class Menu():
         def check(payload):
             return (kwargs.get('check', default_check)(payload) and
                     str(payload.emoji.name) in list(emoji_to_message.emoji_dict.keys()) and
-                    payload.user_id == ctx.author.id and 
+                    payload.user_id == ctx.author.id and
                     payload.message_id == message.id)
 
         if not message:
