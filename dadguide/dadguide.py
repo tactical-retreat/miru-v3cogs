@@ -884,7 +884,6 @@ class DgMonster(DadguideItem):
 
     @property
     def true_evo_type(self):
-        print([dgi.monster_id for dgi in self.mats_for_evo])
         if self == self.base_monster:
             return TrueEvoType.Base
         elif 5077 in [dgi.monster_id for dgi in self.mats_for_evo]:

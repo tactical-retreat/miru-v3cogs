@@ -115,6 +115,12 @@ class FancySay(commands.Cog):
         message = self.emojify(message)
         await ctx.send(message)
 
+    @commands.command(aliases = ["testparrot", "testrepeat"])
+    @checks.mod_or_permissions(manage_messages=True)
+    async def testsay(self, ctx, *, message):
+        """Make Miru parrot a phrase without smart emoji replacements."""
+        await ctx.send(message)
+
     @commands.command()
     @checks.mod_or_permissions(manage_messages=True)
     async def mask(self, ctx, *, message):

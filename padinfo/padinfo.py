@@ -191,8 +191,8 @@ class PadInfo(commands.Cog):
         else:
             await ctx.send(self.makeFailureMsg(err))
 
-    @commands.command()
-    async def id(self, ctx, *, query: str):
+    @commands.command(name="id")
+    async def _id(self, ctx, *, query: str):
         """Monster info (main tab)"""
         await self._do_id(ctx, query)
 
@@ -505,7 +505,7 @@ class PadInfo(commands.Cog):
                       [debug_info1, debug_info2]
                     ))
             if m1 and m2:
-                ctx.send("Major Discrepency: {} -> {}/{}".format(query, m1.name_na, m2.name_na)) 
+                ctx.send("Major Discrepency: {} -> {}/{}".format(query, m1.name_na, m2.name_na))
         await ctx.send("Done running diff checker.  {}/{} passed.".format(s,len(hist_aggreg)))
         print(f)
 
