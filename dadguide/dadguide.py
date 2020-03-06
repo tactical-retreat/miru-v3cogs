@@ -1392,16 +1392,7 @@ class MonsterIndex(object):
             if (query in m.name_na.lower() or query in m.name_jp.lower()):
                 matches.add(m)
         if len(matches):
-            return self.pickBestMonster(matches), None, 'Full name match on nickname, max of {}'.format(
-                len(matches))
-
-        # full name contains on full monster list, take max id
-
-        for m in self.all_monsters:
-            if (query in m.name_na.lower() or query in m.name_jp.lower()):
-                matches.add(m)
-        if len(matches):
-            return self.pickBestMonster(matches), None, 'Full name match on full list, max of {}'.format(
+            return self.pickBestMonster(matches), None, 'Nickname contains nickname match ({})'.format(
                 len(matches))
 
         # No decent matches. Try near hits on nickname instead

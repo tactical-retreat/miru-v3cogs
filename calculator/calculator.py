@@ -13,7 +13,9 @@ import discord
 from redbot.core import commands
 from redbot.core.utils.chat_formatting import inline, box
 
-ACCEPTED_TOKENS = r'[\[\]\-()*+/0-9=.,% ]|>|<|==|>=|<=|\||&|~|!=|sum|range|random|randint|choice|randrange|True|False|if|and|or|else|is|not|for|in|acos|acosh|asin|asinh|atan|atan2|atanh|ceil|copysign|cos|cosh|degrees|e|erf|erfc|exp|expm1|fabs|factorial|floor|fmod|frexp|fsum|gamma|gcd|hypot|inf|isclose|isfinite|isinf|isnan|ldexp|lgamma|log|log10|log1p|log2|modf|nan|pi|pow|radians|sin|sinh|sqrt|tan|tanh|round'
+from rpadutils.rpadutils import CtxIO
+
+ACCEPTED_TOKENS = r'[\[\]\-()*+/0-9=.,% ]|>|<|==|>=|<=|\||&|~|!=|factorial|randrange|isfinite|copysign|radians|isclose|degrees|randint|lgamma|choice|random|round|log1p|log10|ldexp|isnan|isinf|hypot|gamma|frexp|floor|expm1|atanh|atan2|asinh|acosh|False|range|tanh|sqrt|sinh|modf|log2|fmod|fabs|erfc|cosh|ceil|atan|asin|acos|else|True|fsum|tan|sin|pow|nan|log|inf|gcd|sum|exp|erf|cos|for|not|and|pi|in|is|or|if|e|x'
 
 ALTERED_TOKENS = {'^': '**'}
 
@@ -34,8 +36,8 @@ class Calculator(commands.Cog):
         help_msg = HELP_MSG + '\n' + ACCEPTED_TOKENS
         await ctx.author.send(box(help_msg))
 
-    @commands.command(name='calculator', aliases=['calc'])
-    async def _calc(self, ctx, *, inp):
+    @commands.command(aliases=['calc'])
+    async def calculator(self, ctx, *, inp):
         '''Evaluate equations. Use helpcalc for more info.'''
         unaccepted = list(filter(None, re.split(ACCEPTED_TOKENS, inp)))
         bad_inp = []
@@ -62,6 +64,10 @@ class Calculator(commands.Cog):
         except subprocess.TimeoutExpired:
             await ctx.send(inline('Command took too long to execute. Quit trying to break the bot.'))
             return
+        except subprocess.CalledProcessError as e:
+            await ctx.send(inline(e.output.decode("utf-8").strip().split('\n')[-1]))
+            return
+
 
         if len(str(calc_result)) > 1024:
             await ctx.send(inline("The result is obnoxiously long!  Try a request under 1k characters!"))

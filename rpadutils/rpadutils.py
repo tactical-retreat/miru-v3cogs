@@ -687,12 +687,13 @@ async def confirm_message(ctx, text, yemoji = "✅", nemoji = "❌", timeout = 1
     await msg.delete()
     return ret
 
-class CtxIO:
+class CtxIO(io.IOBase):
     def __init__(self, ctx):
         self.ctx = ctx
+        super(CtxIO, self).__init__()
 
     def read(self):
         raise io.UnsupportedOperation("read")
 
     def write(self, data):
-        asyncio.run_coroutine_threadsafe(self.ctx.send(data))
+        asyncio.ensure_future(self.ctx.send(data))

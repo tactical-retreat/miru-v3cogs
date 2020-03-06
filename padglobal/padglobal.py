@@ -284,7 +284,7 @@ class PadGlobal(commands.Cog):
         await padinfo_cog.refresh_index()
         await ctx.send('finished reload')
 
-    @commands.group()
+    @commands.group(aliases = ['pdg'])
     @is_padglobal_admin()
     async def padglobal(self, ctx):
         """PAD global custom commands."""
@@ -858,6 +858,18 @@ class PadGlobal(commands.Cog):
 
         for page in pagify(msg):
             await ctx.send(box(page))
+
+    @padglobal.command()
+    async def debuglookup(self, ctx, *, term: str):
+        """Shows why a query matches to a monster"""
+        term = term.lower().replace('?', '')
+        nm, err, deb = lookup_named_monster(term)
+        base = nm.group_computed_basename.title() if nm else nm
+        name = nm.name_na if nm else nm
+        monster_id = nm.monster_id if nm else nm
+        definition = self.settings.which().get(monster_id, None)
+        await ctx.send('Which Debug:\n```Base: {}\nName: {}\nID: {}\nError: {}\nDebug: {}```'
+                                    .format(base, name, monster_id, err, deb))
 
     @padglobal.command()
     @checks.is_owner()
