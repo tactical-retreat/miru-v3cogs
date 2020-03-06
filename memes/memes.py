@@ -106,7 +106,7 @@ class Memes(commands.Cog):
         Example:
         [p]setmemerole Regular"""
 
-        role = get_role(ctx.message.guild.roles, rolename)
+        role = get_role(ctx.guild.roles, rolename)
         self.settings.setPrivileged(ctx.guild.id, role.id)
         await ctx.send("done")
 
