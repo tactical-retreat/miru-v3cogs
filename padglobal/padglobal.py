@@ -767,7 +767,6 @@ class PadGlobal(commands.Cog):
     def which_to_text(self):
         monsters = defaultdict(list)
         for monster_id in self.settings.which():
-            monster_id = str(monster_id)
             m = monster_id_to_monster(monster_id)
             nm = monster_id_to_named_monster(monster_id)
             if m is None or nm is None:
