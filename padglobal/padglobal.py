@@ -833,16 +833,15 @@ class PadGlobal(commands.Cog):
         """Gets a list of all which commands."""
         items = list()
         monsters = []
-        whiches = self.settings.which()
-        for w in whiches:
+        for w in self.settings.which():
             w %= 10000
-            nm, e, s = lookup_named_monster(w)
-            if not nm:
-                print(w,e,s)
-                continue
+            
+            nm = monster_id_to_named_monster(w)
             name = nm.group_computed_basename.title()
-            if isinstance(whiches[w], list):
-                monsters.append([name, whiches[w][1]])
+
+            result = self.settings.which()[w]
+            if isinstance(result, list):
+                monsters.append([name, result[1]])
             else:
                 monsters.append([name, "2000-01-01"])
 
