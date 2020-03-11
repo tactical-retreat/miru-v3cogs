@@ -274,13 +274,13 @@ class EvoType(Enum):
 
 class TrueEvoType(Enum):
     """Evo types unsupported by DadGuide."""
-    Base = -1
-    Normal = 0
-    Ultimate = 1
-    Reincarnated = 2
-    Assist = 3
-    Pixel = 4
-    Super_Reincarnated = 5
+    Base = ""
+    Normal = ""
+    Ultimate = ""
+    Reincarnated = "Reincarnated"
+    Assist = "Assist"
+    Pixel = "Pixel"
+    SuperReincarnated = "Super Reincarnated"
 
 class Server(Enum):
     JP = 0

@@ -12,6 +12,7 @@ import sys
 import discord
 from redbot.core import commands
 from redbot.core.utils.chat_formatting import inline, box
+from functools import reduce
 
 from rpadutils.rpadutils import CtxIO
 
@@ -80,3 +81,19 @@ class Calculator(commands.Cog):
             em.add_field(name='Input', value='`{}`'.format(inp))
             em.add_field(name='Result', value=calc_result)
             await ctx.send(embed=em)
+
+    @commands.command()
+    async def add(self, ctx, *, inp):
+        """Adds a string of numbers"""
+        em = discord.Embed(color=discord.Color.greyple())
+        em.add_field(name='Input', value='`{}`'.format('+'.join(filter(None,re.split(r'\D', inp)))))
+        em.add_field(name='Result', value=sum(map(lambda x: int('0'+x), re.split(r'\D', inp))))
+        await ctx.send(embed=em)
+
+    @commands.command()
+    async def multiply(self, ctx, *, inp):
+        """Multiplies a string of numbers"""
+        em = discord.Embed(color=discord.Color.greyple())
+        em.add_field(name='Input', value='`{}`'.format('*'.join(filter(None,re.split(r'\D', inp)))))
+        em.add_field(name='Result', value=reduce(lambda x, y: x*int(y) if y else x, re.split(r'\D', inp), 1))
+        await ctx.send(embed=em)
