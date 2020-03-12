@@ -272,7 +272,11 @@ class EvoType(Enum):
     UvoAwoken = 2
     UuvoReincarnated = 3
 
+<<<<<<< HEAD
 class InternalEvoType(Enum):
+=======
+class TrueEvoType(Enum):
+>>>>>>> upstream/master
     """Evo types unsupported by DadGuide."""
     Base = ""
     Normal = ""
@@ -885,6 +889,7 @@ class DgMonster(DadguideItem):
     @property
     def true_evo_type(self):
         if self == self.base_monster:
+<<<<<<< HEAD
             return InternalEvoType.Base
         elif 5077 in [dgi.monster_id for dgi in self.mats_for_evo]:
             return InternalEvoType.Super_Reincarnated
@@ -898,6 +903,21 @@ class DgMonster(DadguideItem):
             return InternalEvoType.Ultimate
         else:
             return InternalEvoType.Normal
+=======
+            return TrueEvoType.Base
+        elif 5077 in [dgi.monster_id for dgi in self.mats_for_evo]:
+            return TrueEvoType.Super_Reincarnated
+        elif 3826 in [dgi.monster_id for dgi in self.mats_for_evo]:
+            return TrueEvoType.Pixel
+        elif self.is_equip:
+            return TrueEvoType.Assist
+        elif self.cur_evo_type == EvoType.UuvoReincarnated:
+            return TrueEvoType.Reincarnated
+        elif self.cur_evo_type == EvoType.UvoAwoken:
+            return TrueEvoType.Ultimate
+        else:
+            return TrueEvoType.Normal
+>>>>>>> upstream/master
 
 
 
