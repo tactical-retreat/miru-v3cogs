@@ -47,7 +47,7 @@ class AzureLane(commands.Cog):
         query = query.lower().strip()
         c = None
         if query.isdigit():
-            c = self.id_to_card.get(int(query), None)
+            c = self.id_to_card.get(query, None)
         else:
             c = self.names_to_card.get(query, None)
             if c is None:
