@@ -875,6 +875,25 @@ class DgMonster(DadguideItem):
         return self.evo_from.evolution_type if self.evo_from else EvoType.Base
 
     @property
+    def true_evo_type(self):
+        if self == self.base_monster:
+            return InternalEvoType.Base
+        elif 5077 in [dgi.monster_id for dgi in self.mats_for_evo]:
+            return InternalEvoType.SuperReincarnated
+        elif 3826 in [dgi.monster_id for dgi in self.mats_for_evo]:
+            return InternalEvoType.Pixel
+        elif self.is_equip:
+            return InternalEvoType.Assist
+        elif self.cur_evo_type == EvoType.UuvoReincarnated:
+            return InternalEvoType.Reincarnated
+        elif self.cur_evo_type == EvoType.UvoAwoken:
+            return InternalEvoType.Ultimate
+        else:
+            return InternalEvoType.Normal
+
+
+
+    @property
     def mats_for_evo(self):
         if self.evo_from is None:
             return []
