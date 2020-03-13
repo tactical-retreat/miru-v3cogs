@@ -2,10 +2,11 @@ import json
 import random
 import re
 
+import discord
 from redbot.core import checks
 from redbot.core import commands
 from redbot.core.bot import Red
-from redbot.core.utils.chat_formatting import *
+from redbot.core.utils.chat_formatting import inline, box
 
 from rpadutils import CogSettings, clean_global_mentions
 
@@ -122,7 +123,7 @@ class Donations(commands.Cog):
             await ctx.send(inline('Donor-only command'))
             return
 
-        await ctx.send(ctx.message.author.mention + ' ' + random.choice(self.insults_list))
+        await ctx.send(ctx.author.mention + ' ' + random.choice(self.insults_list))
 
     @commands.command()
     async def insultme(self, ctx):
@@ -221,7 +222,7 @@ class Donations(commands.Cog):
             await ctx.send(inline('Donor-only command'))
             return
 
-        if 'nsfw' in ctx.message.channel.name.lower():
+        if 'nsfw' in ctx.channel.name.lower():
             await ctx.send(ctx.author.mention + ' ' + random.choice(self.perverted_list))
         else:
             await ctx.send(ctx.author.mention + ' Filthy hentai!')

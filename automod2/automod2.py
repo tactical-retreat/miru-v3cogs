@@ -10,10 +10,11 @@ from collections import defaultdict
 from collections import deque
 from datetime import datetime
 
+import discord
 import prettytable
 from redbot.core import checks
 from redbot.core import commands
-from redbot.core.utils.chat_formatting import *
+from redbot.core.utils.chat_formatting import inline, box, pagify
 
 import rpadutils
 from rpadutils import CogSettings, boxPagifySay
@@ -106,10 +107,10 @@ class AutoMod2(commands.Cog):
         For more information, use [p]automodhelp
         """
 
-    @automod2.command(name="addpattern")
+    @automod2.command()
     @commands.guild_only()
     @checks.mod_or_permissions(manage_guild=True)
-    async def addPattern(self, ctx, name, include_pattern, exclude_pattern='', error=None):
+    async def addpattern(self, ctx, name, include_pattern, exclude_pattern='', error=None):
         """Add a pattern for use in this server."""
         if error is not None:
             await ctx.send(inline('Too many inputs detected, check your quotes'))
@@ -123,10 +124,10 @@ class AutoMod2(commands.Cog):
         self.settings.addPattern(ctx.guild.id, name, include_pattern, exclude_pattern)
         await ctx.send(inline('Added pattern'))
 
-    @automod2.command(name="rmpattern")
+    @automod2.command()
     @commands.guild_only()
     @checks.mod_or_permissions(manage_guild=True)
-    async def rmPattern(self, ctx, *, name):
+    async def rmpattern(self, ctx, *, name):
         """Remove a pattern from this server. Pattern must not be in use."""
         exit_code = self.settings.rmPattern(ctx.guild.id, name)
         if exit_code == 1:
@@ -136,10 +137,10 @@ class AutoMod2(commands.Cog):
         else:
             await ctx.send(inline("Rule '{}' is in use.".format(name)))
 
-    @automod2.command(name="addwhitelist")
+    @automod2.command()
     @commands.guild_only()
     @checks.mod_or_permissions(manage_guild=True)
-    async def addWhitelist(self, ctx, *, name):
+    async def addwhitelist(self, ctx, *, name):
         """Add the named pattern as a whitelist for this channel."""
         name = name.strip('"')
         if self.settings.addWhitelist(ctx.guild.id, ctx.channel.id, name):
@@ -147,20 +148,20 @@ class AutoMod2(commands.Cog):
         else:
             await ctx.send(inline("Rule '{}' is undefined.".format(name)))
 
-    @automod2.command(name="rmwhitelist")
+    @automod2.command()
     @commands.guild_only()
     @checks.mod_or_permissions(manage_guild=True)
-    async def rmWhitelist(self, ctx, *, name):
+    async def rmwhitelist(self, ctx, *, name):
         """Remove the named pattern as a whitelist for this channel."""
         if self.settings.rmWhitelist(ctx.guild.id, ctx.channel.id, name):
             await ctx.send(inline('Removed whitelist config for: ' + name))
         else:
             await ctx.send(inline("Rule '{}' is undefined.".format(name)))
 
-    @automod2.command(name="addblacklist")
+    @automod2.command()
     @commands.guild_only()
     @checks.mod_or_permissions(manage_guild=True)
-    async def addBlacklist(self, ctx, *, name):
+    async def addblacklist(self, ctx, *, name):
         """Add the named pattern as a blacklist for this channel."""
         name = name.strip('"')
         if self.settings.addBlacklist(ctx.guild.id, ctx.channel.id, name):
@@ -168,17 +169,17 @@ class AutoMod2(commands.Cog):
         else:
             await ctx.send(inline("Rule '{}' is undefined.".format(name)))
 
-    @automod2.command(name="rmblacklist")
+    @automod2.command()
     @commands.guild_only()
     @checks.mod_or_permissions(manage_guild=True)
-    async def rmBlacklist(self, ctx, *, name):
+    async def rmblacklist(self, ctx, *, name):
         """Remove the named pattern as a blacklist for this channel."""
         if self.settings.rmBlacklist(ctx.guild.id, ctx.channel.id, name):
             await ctx.send(inline('Removed blacklist config for: ' + name))
         else:
             await ctx.send(inline("Rule '{}' is undefined.".format(name)))
 
-    @automod2.command(name="list")
+    @automod2.command()
     @commands.guild_only()
     @checks.mod_or_permissions(manage_guild=True)
     async def list(self, ctx):
@@ -208,7 +209,7 @@ class AutoMod2(commands.Cog):
             output += '\n\tAuto Emojis Type: {}'.format(auto_emojis_type)
         await boxPagifySay(ctx.send, output)
 
-    @automod2.command(name="patterns")
+    @automod2.command()
     @commands.guild_only()
     @checks.mod_or_permissions(manage_guild=True)
     async def patterns(self, ctx):
@@ -435,7 +436,7 @@ class AutoMod2(commands.Cog):
                 await ctx.send(inline('Watchdog set with cooldown of {} seconds'.format(existing_cd)))
         else:
             self.settings.setWatchdogUser(
-                server_id, user.id, ctx.message.author.id, cooldown, reason)
+                server_id, user.id, ctx.author.id, cooldown, reason)
             if cooldown == 0:
                 await ctx.send(inline('Watchdog cleared for {}'.format(user.name)))
             else:
@@ -479,7 +480,7 @@ class AutoMod2(commands.Cog):
         """Set the announcement channel."""
         server_id = ctx.guild.id
         self.settings.setWatchdogChannel(server_id, channel.id)
-        await self.bot.say(inline('Watchdog channel set'))
+        await ctx.send(inline('Watchdog channel set'))
 
     @commands.Cog.listener('on_message')
     async def mod_message_watchdog(self, message):
@@ -557,7 +558,7 @@ class AutoMod2(commands.Cog):
     async def _watchdog_print(self, watchdog_channel_id, output_msg):
         try:
             watchdog_channel = self.bot.get_channel(watchdog_channel_id)
-            await self.bot.send_message(watchdog_channel, output_msg)
+            await watchdog_channel.send(output_msg)
         except Exception as ex:
             print('failed to watchdog', str(ex))
 

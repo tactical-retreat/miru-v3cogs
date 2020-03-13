@@ -5,11 +5,12 @@ import traceback
 import urllib.parse
 from collections import OrderedDict
 
+import discord
 import prettytable
 from redbot.core import checks, data_manager
 from redbot.core import commands
 from redbot.core.bot import Red
-from redbot.core.utils.chat_formatting import *
+from redbot.core.utils.chat_formatting import inline, box
 
 import rpadutils
 from rpadutils import char_to_emoji, Menu, EmojiUpdater, safe_read_json, CogSettings, rmdiacritics
@@ -85,14 +86,14 @@ class IdEmojiUpdater(EmojiUpdater):
             index = evos.index(self.m.monster_id)
             if selected_emoji == self.pad_info.previous_monster_emoji:
                 if index == 0:
-                    self.m = DGCOG.get_monster_by_no(evos[-1])
+                    self.m = DGCOG.get_monster_by_id(evos[-1])
                 else:
-                    self.m = DGCOG.get_monster_by_no(evos[index - 1])
+                    self.m = DGCOG.get_monster_by_id(evos[index - 1])
             elif selected_emoji == self.pad_info.next_monster_emoji:
                 if index == len(evos) - 1:
-                    self.m = DGCOG.get_monster_by_no(evos[0])
+                    self.m = DGCOG.get_monster_by_id(evos[0])
                 else:
-                    self.m = DGCOG.get_monster_by_no(evos[index + 1])
+                    self.m = DGCOG.get_monster_by_id(evos[index + 1])
             else:
                 self.selected_emoji = selected_emoji
                 return True
@@ -145,7 +146,7 @@ class PadInfo(commands.Cog):
         self.historic_lookups_file_path_id2 = _data_file('historic_lookups_id2.json')
         self.historic_lookups_id2 = safe_read_json(self.historic_lookups_file_path_id2)
 
-    def __unload(self):
+    def cog_unload(self):
         # Manually nulling out database because the GC for cogs seems to be pretty shitty
         self.index_all = None
         self.index_na = None
@@ -164,7 +165,9 @@ class PadInfo(commands.Cog):
 
             await asyncio.sleep(60 * 60 * 1)
 
-    async def refresh_index(self):
+    @commands.command()
+    @checks.is_owner()
+    async def refresh_index(self, ctx=None):
         """Refresh the monster indexes."""
         dg_cog = self.bot.get_cog('Dadguide')
         if not dg_cog:
@@ -174,9 +177,9 @@ class PadInfo(commands.Cog):
         self.index_all = dg_cog.create_index()
         self.index_na = dg_cog.create_index(lambda m: m.on_na)
 
-    def get_monster_by_no(self, monster_no: int):
+    def get_monster_by_id(self, monster_id: int):
         dg_cog = self.bot.get_cog('Dadguide')
-        return dg_cog.get_monster_by_no(monster_no)
+        return dg_cog.get_monster_by_id(monster_id)
 
     @commands.command()
     async def jpname(self, ctx, *, query: str):
@@ -189,12 +192,12 @@ class PadInfo(commands.Cog):
             await ctx.send(self.makeFailureMsg(err))
 
     @commands.command(name="id")
-    async def _do_id_all(self, ctx, *, query: str):
+    async def _id(self, ctx, *, query: str):
         """Monster info (main tab)"""
         await self._do_id(ctx, query)
 
-    @commands.command(name="idna")
-    async def _do_id_na(self, ctx, *, query: str):
+    @commands.command()
+    async def idna(self, ctx, *, query: str):
         """Monster info (limited to NA monsters ONLY)"""
         await self._do_id(ctx, query, na_only=True)
 
@@ -205,13 +208,13 @@ class PadInfo(commands.Cog):
         else:
             await ctx.send(self.makeFailureMsg(err))
 
-    @commands.command(name="id2")
-    async def _do_id2_all(self, ctx, *, query: str):
+    @commands.command()
+    async def id2(self, ctx, *, query: str):
         """Monster info (main tab)"""
         await self._do_id2(ctx, query)
 
-    @commands.command(name="id2na")
-    async def _do_id2_na(self, ctx, *, query: str):
+    @commands.command()
+    async def id2na(self, ctx, *, query: str):
         """Monster info (limited to NA monsters ONLY)"""
         await self._do_id2(ctx, query, na_only=True)
 
@@ -221,6 +224,7 @@ class PadInfo(commands.Cog):
             await self._do_idmenu(ctx, m, self.id_emoji)
         else:
             await ctx.send(self.makeFailureMsg(err))
+
 
     @commands.command(name="evos")
     async def evos(self, ctx, *, query: str):
@@ -480,6 +484,31 @@ class PadInfo(commands.Cog):
             self.settings.setEmojiServers(emoji_servers.split(','))
         await ctx.send(inline('Set {} servers'.format(len(self.settings.emojiServers()))))
 
+    @checks.is_owner()
+    @padinfo.command()
+    async def iddiff(self, ctx):
+        """Runs the diff checker for id and id2"""
+        await ctx.send("Running diff checker...")
+        hist_aggreg = list(self.historic_lookups) + list(self.historic_lookups_id2)
+        s = 0
+        f = []
+        for query in hist_aggreg:
+            m1, err1, debug_info1 = self.findMonster(query)
+            m2, err2, debug_info2 = self.findMonster2(query)
+            if m1 == m2 or (m1 and m2 and m1.monster_id == m2.monster_id):
+                s+=1
+                continue
+
+            f.append((query,
+                      [m1.monster_id if m1 else None, m2.monster_id if m2 else None],
+                      [err1, err2],
+                      [debug_info1, debug_info2]
+                    ))
+            if m1 and m2:
+                ctx.send("Major Discrepency: {} -> {}/{}".format(query, m1.name_na, m2.name_na))
+        await ctx.send("Done running diff checker.  {}/{} passed.".format(s,len(hist_aggreg)))
+        print(f)
+
     def get_emojis(self):
         server_ids = [int(sid) for sid in self.settings.emojiServers()]
         return [e for g in self.bot.guilds if g.id in server_ids for e in g.emojis]
@@ -497,7 +526,7 @@ class PadInfo(commands.Cog):
         self.historic_lookups[query] = monster_no
         json.dump(self.historic_lookups, open(self.historic_lookups_file_path, "w+"))
 
-        m = self.get_monster_by_no(nm.monster_id) if nm else None
+        m = self.get_monster_by_id(nm.monster_id) if nm else None
 
         return m, err, debug_info
 
@@ -513,7 +542,7 @@ class PadInfo(commands.Cog):
         self.historic_lookups_id2[query] = monster_no
         json.dump(self.historic_lookups_id2, open(self.historic_lookups_file_path_id2, "w+"))
 
-        m = self.get_monster_by_no(nm.monster_id) if nm else None
+        m = self.get_monster_by_id(nm.monster_id) if nm else None
 
         return m, err, debug_info
 
@@ -757,10 +786,10 @@ def monstersToLsEmbed(left_m: "DgMonster", right_m: "DgMonster"):
     description = ''
     description += '\n**{}**\n{}'.format(
         monsterToHeader(left_m, link=True),
-        left_m.leader_skill.desc if left_m.leader_skill else 'None/Missing')
+        left_m.leader_skill.desc if left_m.leader_skill else 'None')
     description += '\n**{}**\n{}'.format(
         monsterToHeader(right_m, link=True),
-        right_m.leader_skill.desc if right_m.leader_skill else 'None/Missing')
+        right_m.leader_skill.desc if right_m.leader_skill else 'None')
     embed.description = description
 
     return embed
@@ -798,7 +827,6 @@ def monsterToAcquireString(m: "DgMonster"):
         acquire_text = 'MP Shop Evo'
     return acquire_text
 
-
 def match_emoji(emoji_list, name):
     for e in emoji_list:
         if e.name == name:
@@ -811,6 +839,7 @@ def monsterToEmbed(m: "DgMonster", emoji_list):
 
     info_row_1 = monsterToTypeString(m)
     acquire_text = monsterToAcquireString(m)
+    tet_text = m.true_evo_type.value
 
     info_row_2 = '**Rarity** {}\n**Cost** {}'.format(m.rarity, m.cost)
     if acquire_text:
@@ -819,6 +848,8 @@ def monsterToEmbed(m: "DgMonster", emoji_list):
         info_row_2 += '\n**Inheritable**'
     else:
         info_row_2 += '\n**Not inheritable**'
+    if tet_text:
+        info_row_2 += '\n**{}**'.format(tet_text)
 
     embed.add_field(name=info_row_1, value=info_row_2)
 
@@ -856,7 +887,7 @@ def monsterToEmbed(m: "DgMonster", emoji_list):
     embed.description = '{}\n{}'.format(awakenings_row, killers_row)
 
     active_header = 'Active Skill'
-    active_body = 'None/Missing'
+    active_body = 'None'
     active_skill = m.active_skill
     if active_skill:
         active_header = 'Active Skill ({} -> {})'.format(active_skill.turn_max,
@@ -865,7 +896,7 @@ def monsterToEmbed(m: "DgMonster", emoji_list):
     embed.add_field(name=active_header, value=active_body, inline=False)
 
     leader_skill = m.leader_skill
-    ls_row = m.leader_skill.desc if leader_skill else 'None/Missing'
+    ls_row = m.leader_skill.desc if leader_skill else 'None'
     ls_header = 'Leader Skill'
     if leader_skill:
         hp, atk, rcv, resist = m.leader_skill.data

@@ -2,10 +2,11 @@ import asyncio
 import random
 import traceback
 
+import discord
 from redbot.core import checks
 from redbot.core import commands
 from redbot.core.bot import Red
-from redbot.core.utils.chat_formatting import *
+from redbot.core.utils.chat_formatting import inline, box
 
 from rpadutils import CogSettings, get_role, get_role_from_id
 
@@ -44,14 +45,14 @@ class StreamCopy(commands.Cog):
             await ctx.send(inline('Unknown role'))
             return
 
-        self.settings.set_streamer_role(ctx.message.server.id, role.id)
+        self.settings.set_streamer_role(ctx.guild.id, role.id)
         await ctx.send(inline('Done. Make sure that role is below the bot in the hierarchy'))
 
     @streamcopy.command()
     @commands.guild_only()
     @checks.mod_or_permissions(manage_guild=True)
     async def clearStreamerRole(self, ctx):
-        self.settings.clear_streamer_role(ctx.message.server.id)
+        self.settings.clear_streamer_role(ctx.guild.id)
         await self.bot.say(inline('Done'))
 
     @streamcopy.command(name="adduser")

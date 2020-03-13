@@ -5,18 +5,21 @@ import inspect
 import json
 import os
 import re
+import io
 import signal
 import time
 import unicodedata
 from functools import wraps
+from typing import List, Optional
 
 import aiohttp
 import backoff
+import discord
 import pytz
 from discord.ext.commands import CommandNotFound
 from redbot.core import commands, data_manager
 from redbot.core.bot import Red
-from redbot.core.utils.chat_formatting import *
+from redbot.core.utils.chat_formatting import box, pagify
 
 
 class RpadUtils(commands.Cog):
@@ -135,11 +138,11 @@ def should_download(file_path, expiry_secs):
 
     ftime = os.path.getmtime(file_path)
     file_age = time.time() - ftime
-    print("for " + file_path + " got " + str(ftime) + ", age " +
-          str(file_age) + " against expiry of " + str(expiry_secs))
+    #print("for " + file_path + " got " + str(ftime) + ", age " +
+    #      str(file_age) + " against expiry of " + str(expiry_secs))
 
     if file_age > expiry_secs:
-        print("file too old, download it")
+        print("file {} too old, download it".format(file_path))
         return True
     else:
         return False
@@ -326,10 +329,10 @@ class Menu():
                     pass
 
         def check(payload):
-            return kwargs.get('check', default_check)(payload) and \
-                   str(payload.emoji.name) in list(emoji_to_message.emoji_dict.keys()) and \
-                   payload.user_id == ctx.author.id and \
-                   payload.message_id == message.id
+            return (kwargs.get('check', default_check)(payload) and
+                    str(payload.emoji.name) in list(emoji_to_message.emoji_dict.keys()) and
+                    payload.user_id == ctx.author.id and
+                    payload.message_id == message.id)
 
         if not message:
             raise ValueError(message, ctx)
@@ -337,7 +340,7 @@ class Menu():
 
         try:
             p = await self.bot.wait_for('raw_reaction_add', check=check, timeout=timeout)
-        except Exception as e:
+        except asyncio.TimeoutError:
             p = None
 
         if p is None:
@@ -419,7 +422,7 @@ def fix_emojis_for_server(emoji_list, msg_text):
     # For each unique looking emoji thing
     for m in set(matches):
         # Create a regex for that emoji replacing the digit
-        m_re = re.sub(r'\d', r'\d', m)
+        m_re = re.sub(r'\d', r'&', m).rstrip("~")
         for em in emoji_list:
             # If the current emoji matches the regex, force a replacement
             emoji_code = str(em)
@@ -492,18 +495,17 @@ def clean_global_mentions(content):
     return re.sub(r'(@)(\w)', '\\g<1>\u200b\\g<2>', content)
 
 
-def intify(iterable):
-    if isinstance(iterable, dict):
-        for item in list(iterable):
-            try:
-                iterable[int(item)] = intify(iterable[item])
-            except:
-                iterable[item] = intify(iterable[item])
-    elif isinstance(iterable, (list, tuple)):
-        for item in iterable:
-            if intify(item) != item:
-                iterable.append(intify(item))
-    return iterable
+def intify(input):
+    if isinstance(input, dict):
+        return {intify(k): intify(v) for k, v in input.items()}
+    elif isinstance(input, (list, tuple)):
+        return [intify(x) for x in input]
+    elif isinstance(input, str) and input.isdigit():
+        return int(input)
+    elif isinstance(input, str) and input.replace('.', '', 1).isdigit():
+        return float(input)
+    else:
+        return input
 
 
 class CogSettings(object):
@@ -543,11 +545,24 @@ class CogSettings(object):
         return {}
 
 
-def get_prefix(bot, server, text):
-    for p in bot.settings.get_prefixes(server):
+async def get_prefix(bot: Red, message: discord.Message, text: str = None) -> Optional[str]:
+    text = text or message.content or ''
+    for p in await get_prefixes(bot, message):
         if text.startswith(p):
             return p
-    return False
+    return None
+
+
+async def get_prefixes(bot: Red, message: discord.Message) -> List[str]:
+    prefixes = await bot.get_prefix(message)  # This returns all server prefixes
+    if isinstance(prefixes, str):
+        prefixes = [prefixes]
+
+    # In case some idiot sets a null prefix
+    if "" in prefixes:
+        prefixes.remove("")
+
+    return prefixes
 
 
 def strip_right_multiline(txt: str):
@@ -593,7 +608,7 @@ async def await_and_remove(bot, react_msg, listen_user, delete_msgs=None, emoji=
 
     try:
         p = await bot.wait_for('add_reaction', check=check, timeout=timeout)
-    except:
+    except asyncio.TimeoutError:
         # Expected after {timeout} seconds
         p = None
 
@@ -650,3 +665,35 @@ def timeout_after(seconds=10, error_message=os.strerror(errno.ETIME)):
         return wraps(func)(wrapper)
 
     return decorator
+
+
+async def confirm_message(ctx, text, yemoji = "✅", nemoji = "❌", timeout = 10):
+    msg = await ctx.send(text)
+    await msg.add_reaction(yemoji)
+    await msg.add_reaction(nemoji)
+    def check(reaction, user):
+        return (str(reaction.emoji) in [yemoji, nemoji]
+                and user.id == ctx.author.id
+                and reaction.message.id == msg.id)
+
+    ret = False
+    try:
+        r, u = await ctx.bot.wait_for('reaction_add', check=check, timeout=timeout)
+        if r.emoji == yemoji:
+            ret = True
+    except asyncio.TimeoutError:
+        pass
+
+    await msg.delete()
+    return ret
+
+class CtxIO(io.IOBase):
+    def __init__(self, ctx):
+        self.ctx = ctx
+        super(CtxIO, self).__init__()
+
+    def read(self):
+        raise io.UnsupportedOperation("read")
+
+    def write(self, data):
+        asyncio.ensure_future(self.ctx.send(data))

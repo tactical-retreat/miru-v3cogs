@@ -24,7 +24,7 @@ import romkan
 from redbot.core import checks, data_manager
 from redbot.core import commands
 from redbot.core.bot import Red
-from redbot.core.utils.chat_formatting import *
+from redbot.core.utils.chat_formatting import inline
 
 import rpadutils
 
@@ -56,7 +56,7 @@ class Dadguide(commands.Cog):
     def __init__(self, bot: Red, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.bot = bot
-        self._is_ready = asyncio.Event(loop=self.bot.loop)
+        self._is_ready = asyncio.Event()
 
         self.settings = DadguideSettings("dadguide")
 
@@ -72,16 +72,15 @@ class Dadguide(commands.Cog):
         self.translated_names = {}
 
         self.database = load_database(None)
-        self.index = None
+        self.index = None  # type: MonsterIndex
 
-    @asyncio.coroutine
-    def wait_until_ready(self):
+    async def wait_until_ready(self):
         """Wait until the Dadguide cog is ready.
 
         Call this from other cogs to wait until Dadguide finishes refreshing its database
         for the first time.
         """
-        yield from self._is_ready.wait()
+        return await self._is_ready.wait()
 
     def create_index(self, accept_filter=None):
         """Exported function that allows a client cog to create a monster index"""
@@ -91,11 +90,11 @@ class Dadguide(commands.Cog):
                             self.panthname_overrides,
                             accept_filter=accept_filter)
 
-    def get_monster_by_no(self, monster_no: int):
-        """Exported function that allows a client cog to get a full PgMonster by monster_no"""
-        return self.database.get_monster(monster_no)
+    def get_monster_by_id(self, monster_id: int):
+        """Exported function that allows a client cog to get a full DgMonster by monster_id"""
+        return self.database.get_monster(monster_id)
 
-    def __unload(self):
+    def cog_unload(self):
         # Manually nulling out database because the GC for cogs seems to be pretty shitty
         if self.database:
             self.database.close()
@@ -273,6 +272,15 @@ class EvoType(Enum):
     UvoAwoken = 2
     UuvoReincarnated = 3
 
+class TrueEvoType(Enum):
+    """Evo types unsupported by DadGuide."""
+    Base = ""
+    Normal = ""
+    Ultimate = ""
+    Reincarnated = "Reincarnated"
+    Assist = "Assist"
+    Pixel = "Pixel"
+    SuperReincarnated = "Super Reincarnated"
 
 class Server(Enum):
     JP = 0
@@ -1088,7 +1096,7 @@ class MonsterSearchHelper(object):
 
         txt = active_desc
         if 'row' in txt:
-            parts = re.split('\Wand\W|;\W', txt)
+            parts = re.split(r'\Wand\W|;\W', txt)
             for i in range(0, len(parts)):
                 if 'row' in parts[i]:
                     self.row_convert.append(strip_next_clause(
@@ -1096,7 +1104,7 @@ class MonsterSearchHelper(object):
 
         txt = active_desc
         if 'column' in txt:
-            parts = re.split('\Wand\W|;\W', txt)
+            parts = re.split(r'\Wand\W|;\W', txt)
             for i in range(0, len(parts)):
                 if 'column' in parts[i]:
                     self.column_convert.append(strip_next_clause(
@@ -1107,7 +1115,7 @@ class MonsterSearchHelper(object):
         change_txt = 'change '
         if not convert_done and change_txt in active_desc and 'orb' in active_desc:
             txt = active_desc
-            parts = re.split('\Wand\W|;\W', txt)
+            parts = re.split(r'\Wand\W|;\W', txt)
             for i in range(0, len(parts)):
                 parts[i] = strip_prev_clause(parts[i], change_txt) if change_txt in parts[i] else ''
 
@@ -1231,10 +1239,10 @@ class MonsterIndex(object):
         self.all_monsters = named_monsters
         self.all_na_name_to_monsters = {m.name_na.lower(): m for m in named_monsters}
         self.monster_no_na_to_named_monster = {m.monster_no_na: m for m in named_monsters}
-        self.monster_no_to_named_monster = {m.monster_id: m for m in named_monsters}
+        self.monster_id_to_named_monster = {m.monster_id: m for m in named_monsters}
 
         for nickname, monster_id in nickname_overrides.items():
-            nm = self.monster_no_to_named_monster.get(monster_id)
+            nm = self.monster_id_to_named_monster.get(monster_id)
             if nm:
                 self.all_entries[nickname] = nm
 
@@ -1269,6 +1277,7 @@ class MonsterIndex(object):
 
         awoken = lower_name.startswith('awoken') or '覚醒' in lower_name
         revo = lower_name.startswith('reincarnated') or '転生' in lower_name
+        srevo = lower_name.startswith('super reincarnated') or '超転生' in lower_name
         mega = lower_name.startswith('mega awoken') or '極醒' in lower_name
         awoken_or_revo_or_equip_or_mega = awoken or revo or m.is_equip or mega
 
@@ -1286,6 +1295,10 @@ class MonsterIndex(object):
             prefixes.add('mega')
             prefixes.add('mega awoken')
             prefixes.add('awoken')
+
+        if srevo:
+            prefixes.add('srevo')
+            prefixes.add('super reincarnated')
 
         # Prefixes for evo type
         if m.cur_evo_type == EvoType.Base:
@@ -1379,16 +1392,7 @@ class MonsterIndex(object):
             if (query in m.name_na.lower() or query in m.name_jp.lower()):
                 matches.add(m)
         if len(matches):
-            return self.pickBestMonster(matches), None, 'Full name match on nickname, max of {}'.format(
-                len(matches))
-
-        # full name contains on full monster list, take max id
-
-        for m in self.all_monsters:
-            if (query in m.name_na.lower() or query in m.name_jp.lower()):
-                matches.add(m)
-        if len(matches):
-            return self.pickBestMonster(matches), None, 'Full name match on full list, max of {}'.format(
+            return self.pickBestMonster(matches), None, 'Nickname contains nickname match ({})'.format(
                 len(matches))
 
         # No decent matches. Try near hits on nickname instead

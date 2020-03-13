@@ -4,11 +4,12 @@ import json
 import re
 import subprocess
 
+import discord
 import pymysql
 from redbot.core import checks
 from redbot.core import commands
 from redbot.core.bot import Red
-from redbot.core.utils.chat_formatting import *
+from redbot.core.utils.chat_formatting import inline, box, pagify
 
 from rpadutils import CogSettings
 
@@ -128,7 +129,7 @@ class PadGuideDb(commands.Cog):
 
     def do_dungeon_load(self, server, dungeon_id, dungeon_floor_id):
         args = [
-            'python3',
+            '/usr/bin/python3',
             self.settings.dungeonScriptFile(),
             '--db_config={}'.format(self.settings.configFile()),
             '--server={}'.format(server),
