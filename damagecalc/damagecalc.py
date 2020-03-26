@@ -238,7 +238,7 @@ class DamageCalc(commands.Cog):
         Resistance, defense, loading by monster id, killers, etc coming soon
         """
 
-    @commands.command()
+    @commands.command(aliases = ["damagemath", "damagecalc"])
     async def damage(self, ctx, *, damage_spec):
         """Computes damage for the provided damage_spec
 
