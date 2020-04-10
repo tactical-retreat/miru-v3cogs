@@ -122,6 +122,9 @@ class PadGuideDb(commands.Cog):
             server.upper(), dungeon_id, dungeon_floor_id)
 
         self.queue_size += 1
+        if not self.settings.hasUserInfo(server):
+            await ctx.send("There is no account associated with server '{}'.".format(server.upper()))
+            return
         await ctx.send(inline('queued load in slot {}'.format(self.queue_size)))
         await running_load
         self.queue_size -= 1
@@ -257,6 +260,9 @@ class PadGuideDbSettings(CogSettings):
     def setUserInfo(self, server, user_uuid, user_intid):
         self.bot_settings['users'][server.upper()] = [user_uuid, user_intid]
         self.save_settings()
+
+    def hasUserInfo(self, server):
+        return server.upper() in self.bot_settings['users']
 
     def userUuidFor(self, server):
         return self.bot_settings['users'][server.upper()][0]
