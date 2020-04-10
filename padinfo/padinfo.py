@@ -191,7 +191,7 @@ class PadInfo(commands.Cog):
         else:
             await ctx.send(self.makeFailureMsg(err))
 
-    @commands.command(name="id")
+    @commands.command(name="id", aliases="iD Id ID".split())
     async def _id(self, ctx, *, query: str):
         """Monster info (main tab)"""
         await self._do_id(ctx, query.strip(ctx.prefix+"id"))

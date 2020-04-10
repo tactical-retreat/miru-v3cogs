@@ -56,7 +56,7 @@ class PadGuideDb(commands.Cog):
                                cursorclass=pymysql.cursors.DictCursor,
                                autocommit=True)
 
-    @commands.group()
+    @commands.group(aliases=['pdb'])
     @is_padguidedb_admin()
     async def padguidedb(self, context):
         """PadGuide database manipulation."""
@@ -144,16 +144,16 @@ class PadGuideDb(commands.Cog):
     @is_padguidedb_admin()
     async def dungeondrops(self, ctx, dungeon_id: int, dungeon_floor_id: int):
         with self.get_connection() as cursor:
-            sql = ("SELECT stage, drop_monster_id, COUNT(*) AS count"
+            sql = ("SELECT stage, drop_monster_id, plus_amount, pull_time, COUNT(*) AS count"
                    " FROM wave_data"
                    " WHERE dungeon_id = {} AND floor_id = {}"
                    " GROUP BY 1, 2"
                    " ORDER BY 1, 2".format(dungeon_id, dungeon_floor_id))
             cursor.execute(sql)
             results = list(cursor.fetchall())
-            msg = 'stage,drop_monster_id,count'
+            msg = 'stage,drop_monster_id,pluses,time'
             for row in results:
-                msg += '\n{},{},{}'.format(row['stage'], row['drop_monster_id'], row['count'])
+                msg += '\n{},{},{},{}'.format(row['stage'], row['drop_monster_id'], row['plus_amount'], row['pull_time'])
             for page in pagify(msg):
                 await ctx.send(box(page))
 
