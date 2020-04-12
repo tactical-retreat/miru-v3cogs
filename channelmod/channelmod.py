@@ -28,11 +28,11 @@ class ChannelMod(commands.Cog):
         self.channel_last_spoke = {}
 
     @commands.group()
-    @checks.is_owner()
     async def channelmod(self, ctx):
         """Manage channel moderation settings"""
 
     @channelmod.command()
+    @checks.is_owner()
     async def addmirror(self, ctx, source_channel_id: int, dest_channel_id: int, docheck: bool = True):
         """Set mirroring between two channels."""
         if docheck and (not self.bot.get_channel(source_channel_id) or not self.bot.get_channel(dest_channel_id)):
@@ -42,6 +42,7 @@ class ChannelMod(commands.Cog):
         await ctx.send(inline('Done'))
 
     @channelmod.command()
+    @checks.is_owner()
     async def rmmirror(self, ctx, source_channel_id: int, dest_channel_id: int, docheck: bool = True):
         """Remove mirroring between two channels."""
         if docheck and (not self.bot.get_channel(source_channel_id) or not self.bot.get_channel(dest_channel_id)):
@@ -51,6 +52,7 @@ class ChannelMod(commands.Cog):
         await ctx.send(inline('Done'))
 
     @channelmod.command()
+    @checks.is_owner()
     async def mirrorconfig(self, ctx):
         """List mirror config."""
         mirrored_channels = self.settings.mirrored_channels()
@@ -65,8 +67,43 @@ class ChannelMod(commands.Cog):
                 msg += '\n\t{} ({})'.format(channel_id, channel_name)
         await ctx.send(box(msg))
 
+    @channelmod.command()
+    async def countreactions(self, ctx, message: discord.Message):
+        """Count reactions on a message and all of its mirrors."""
+        mirrored_messages = self.settings.get_mirrored_messages(message.channel.id, message.id)
+        if not mirrored_messages:
+            await ctx.send("This message isn't mirrored!")
+        reacts = {}
+        for react in message.reactions:
+            reacts[str(react)] = react.count - 1
+            for (chid, mid) in mirrored_messages:
+                dest_channel = self.bot.get_channel(chid)
+                if not dest_channel:
+                    print('could not locate channel {}'.format(chid))
+                    continue
+                dest_message = await dest_channel.fetch_message(mid)
+                if not dest_message:
+                    print('could not locate message {}'.format(mid))
+                    continue
+                dest_reaction = discord.utils.find(lambda r: r == react, dest_message.reactions)
+                if not dest_reaction:
+                    print('could not locate reaction {}'.format(react))
+                    continue
+                reacts[str(react)] += dest_reaction.count - 1
+        o = ""
+        maxlen = len(str(max(reacts.values(), key=lambda x: len(str(x)))))
+        for r, c in reacts.items():
+            o += "{{}}: {{:{}}}\n".format(maxlen).format(r,c)
+        await ctx.send(o)
+
+
+
+
+
+
+
     @commands.Cog.listener('on_message')
-    async def mirror_msg_new(self, message):
+    async def mirror_msg(self, message):
         if message.author.id == self.bot.user.id or isinstance(message.channel, discord.abc.PrivateChannel):
             return
 
@@ -274,7 +311,7 @@ class ChannelModSettings(CogSettings):
             self.save_settings()
 
     def get_mirrored_messages(self, source_channel: int, source_message: str):
-        """Returns either None or [(channel_id, message_id), ...]"""
+        """Returns [(channel_id, message_id), ...]"""
         channel_config = self.mirrored_channels().get(source_channel, None)
         if channel_config:
             return channel_config['messages'].get(source_message, [])
