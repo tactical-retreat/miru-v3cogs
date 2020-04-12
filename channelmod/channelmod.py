@@ -12,8 +12,6 @@ from redbot.core.utils.chat_formatting import inline
 
 from rpadutils import CogSettings, box
 
-log = logging.getLogger("red.admin")
-
 # Three hour cooldown
 ATTRIBUTION_TIME_SECONDS = 60 * 60 * 3
 
