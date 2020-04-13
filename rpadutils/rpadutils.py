@@ -702,7 +702,7 @@ class CtxIO(io.IOBase):
     def write(self, data):
         asyncio.ensure_future(self.ctx.send(data))
 
-def corowrap(ctx, coro):
+def corowrap(coro):
     fut = asyncio.run_coroutine_threadsafe(coro, RPADCOG.bot)
     try:
         fut.result()

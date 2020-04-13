@@ -68,14 +68,14 @@ class PadGuideDb(commands.Cog):
         self.settings.addAdmin(user.id)
         await ctx.send("done")
 
-    @padguidedb.command(pass_context=True)
+    @padguidedb.command()
     @checks.is_owner()
     async def rmadmin(self, ctx, user: discord.Member):
         """Removes a user from the padguide db admin"""
         self.settings.rmAdmin(user.id)
         await ctx.send("done")
 
-    @padguidedb.command(pass_context=True)
+    @padguidedb.command()
     @checks.is_owner()
     async def setconfigfile(self, ctx, *, config_file):
         """Set the database config file."""
@@ -156,6 +156,7 @@ class PadGuideDb(commands.Cog):
             results = list(cursor.fetchall())
             msg = 'stage,drop_monster_id,pluses,time'
             for row in results:
+                print(type(row['pull_time'])) # Please tell me what this outputs!
                 msg += '\n{},{},{},{}'.format(row['stage'], row['drop_monster_id'], row['plus_amount'], row['pull_time'])
             for page in pagify(msg):
                 await ctx.send(box(page))
@@ -178,8 +179,12 @@ class PadGuideDb(commands.Cog):
 
         self.full_etl_running = True
         await ctx.send(inline('Running full ETL pipeline: this could take a while'))
-        await running_load
-        self.full_etl_running = False
+        try:
+            await running_load
+        except:
+            pass
+        finally:
+            self.full_etl_running = False
         await ctx.send(inline('Full ETL finished'))
 
     def do_full_etl(self):
