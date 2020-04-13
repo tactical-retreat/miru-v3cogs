@@ -194,7 +194,9 @@ class PadInfo(commands.Cog):
     @commands.command(name="id", aliases="iD Id ID".split())
     async def _id(self, ctx, *, query: str):
         """Monster info (main tab)"""
-        await self._do_id(ctx, query.strip(ctx.prefix+"id"))
+        prefix = ctx.prefix+"id"
+        query = prefix.join(filter(None, query.split(prefix)))
+        await self._do_id(ctx, query)
 
     @commands.command()
     async def idna(self, ctx, *, query: str):
