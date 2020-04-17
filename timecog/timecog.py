@@ -25,7 +25,7 @@ time_in_regeces = [
     r'^\s*((?:-?\d+ ?(?:m|h|d|w|y|s)\w* ?)+|now)\b\s*\|\s*((?:-?\d+ ?(?:m|h|d|w|y|s)\w* ?)+)\b (.*)$', #Unused
 ]
 
-DT_FORMAT = "%b %-d, %Y at %-I:%M %p"
+DT_FORMAT = "%A, %b %-d, %Y at %-I:%M %p"
 
 
 class TimeCog(commands.Cog):

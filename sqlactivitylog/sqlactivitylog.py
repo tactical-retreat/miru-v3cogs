@@ -185,7 +185,6 @@ class SqlActivityLogger(commands.Cog):
         await ctx.send(inline('Locked is now {}'.format(self.lock)))
 
     @commands.group()
-    @commands.guild_only()
     @checks.mod_or_permissions(manage_guild=True)
     async def exlog(self, context):
         """Extra log querying tools.
@@ -218,7 +217,6 @@ class SqlActivityLogger(commands.Cog):
         await self.queryAndPrint(ctx, server, USER_QUERY, values, column_data)
 
     @exlog.command()
-    @commands.guild_only()
     async def channel(self, ctx, channel: discord.TextChannel, count=10):
         """exlog channel #general_chat 100
 
@@ -227,7 +225,7 @@ class SqlActivityLogger(commands.Cog):
         The bot is excluded from results.
         """
         count = min(count, MAX_LOGS)
-        server = ctx.guild
+        server = channel.guild
         values = {
             'server_id': server.id,
             'bot_id': self.bot.user.id,
@@ -244,7 +242,6 @@ class SqlActivityLogger(commands.Cog):
         await self.queryAndPrint(ctx, server, CHANNEL_QUERY, values, column_data)
 
     @exlog.command()
-    @commands.guild_only()
     async def userchannel(self, ctx, user: discord.User, channel: discord.TextChannel, count=10):
         """exlog userchannel "{0.author.name}" #general_chat 100
 
@@ -252,7 +249,7 @@ class SqlActivityLogger(commands.Cog):
         Count is optional, with a low default and a maximum value.
         """
         count = min(count, MAX_LOGS)
-        server = ctx.guild
+        server = channel.guild
         values = {
             'server_id': server.id,
             'row_count': count,
@@ -349,7 +346,7 @@ class SqlActivityLogger(commands.Cog):
                     value = server_obj.name if server_obj else value
                 if col == 'clean_content':
                     value = value.replace('```', '~~~')
-                    value = value.replace('`', '\`')
+                    value = value.replace('`', '\\`')
                     value = '\n'.join(textwrap.wrap(value, 60))
                 table_row.append(value)
 

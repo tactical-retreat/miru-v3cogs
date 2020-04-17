@@ -48,7 +48,7 @@ class Scheduler(commands.Cog):
 
         self.settings = SchedulerSettings("scheduler")
         self.events = self.settings.getevents()
-        self.queue = asyncio.PriorityQueue()
+        self.queue = asyncio.PriorityQueue(loop=bot.loop)
         self.queue_lock = asyncio.Lock()
         self.to_kill = {}
         self._load_events()
@@ -113,16 +113,16 @@ class Scheduler(commands.Cog):
         self.save_events()
 
     async def _remove_event(self, name, server):
-        await self.queue_lock.acquire()
-        events = []
-        while self.queue.qsize() != 0:
-            time, event = await self.queue.get()
-            if not (name == event.name and server.id == event.server):
-                events.append((time, event))
+        async with self.queue_lock:
+            events = []
+            while self.queue.qsize() != 0:
+                time, event = await self.queue.get()
+                if not (name == event.name and server.id == event.server):
+                    events.append((time, event))
 
-        for event in events:
-            await self.queue.put(event)
-        self.queue_lock.release()
+            for event in events:
+                await self.queue.put(event)
+            self.queue_lock.release()
 
     @commands.group()
     @commands.guild_only()
@@ -249,31 +249,26 @@ class Scheduler(commands.Cog):
 
     async def queue_manager(self):
         while self == self.bot.get_cog('Scheduler'):
-            await self.queue_lock.acquire()
-            if self.queue.qsize() != 0:
-                curr_time = int(time.time())
-                next_tuple = await self.queue.get()
-                next_time = next_tuple[0]
-                next_event = next_tuple[1]
-                diff = next_time - curr_time
-                diff = diff if diff >= 0 else 0
-                if diff < 30:
-                    log.debug('scheduling call of "{}" in {}s'.format(
-                        next_event.name, diff))
-                    fut = self.bot.loop.call_later(diff, self.run_coro,
-                                                   next_event)
-                    self.to_kill[next_time] = fut
-                    if next_event.repeat:
-                        await self._put_event(next_event, next_time,
-                                              next_event.timedelta)
+            async with self.queue_lock:
+                if self.queue.qsize() != 0:
+                    next_time, next_event = await self.queue.get()
+                    diff = max(next_time-int(time.time()), 0)
+                    if diff < 30:
+                        log.debug('scheduling call of "{}" in {}s'.format(
+                            next_event.name, diff))
+                        fut = self.bot.loop.call_later(diff, self.run_coro,
+                                                       next_event)
+                        self.to_kill[next_time] = fut
+                        if next_event.repeat:
+                            await self._put_event(next_event, next_time,
+                                                  next_event.timedelta)
+                        else:
+                            del self.events[next_event.server][next_event.name]
+                            self.save_events()
                     else:
-                        del self.events[next_event.server][next_event.name]
-                        self.save_events()
-                else:
-                    log.debug('Will run {} "{}" in {}s'.format(
-                        next_event.name, next_event.command, diff))
-                    await self._put_event(next_event, next_time)
-            self.queue_lock.release()
+                        log.debug('Will run {} "{}" in {}s'.format(
+                            next_event.name, next_event.command, diff))
+                        await self._put_event(next_event, next_time)
 
             to_delete = []
             for start_time, old_command in self.to_kill.items():
