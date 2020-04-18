@@ -710,3 +710,10 @@ def corowrap(coro):
         except:
             pass
     return func
+
+def fawait(coro):
+    fut = asyncio.run_coroutine_threadsafe(coro, RPADCOG.bot.loop)
+    try:
+        fut.result()
+    except:
+        pass
