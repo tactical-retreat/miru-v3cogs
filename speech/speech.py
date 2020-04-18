@@ -96,19 +96,18 @@ class Speech(commands.Cog):
         return False
 
     async def play_path(self, channel, audio_path: str):
-        existing_vc = self.bot.voice_client_in(channel.guild)
+        existing_vc = channel.guild.voice_client
         if existing_vc:
-            await existing_vc.disconnect()
+            await existing_vc.disconnect(force=True)
 
         voice_client = None
         try:
             voice_client = await channel.connect()
 
-            options = '-filter "volume=volume=0.3"'
+            options = '-filter "volume=volume=0.3" -ac 1'
 
             audio_source = discord.FFmpegPCMAudio(audio_path, options=options)
-            voice_client.play(audio_source, after = corowrap(voice_client.disconnect))
-
+            voice_client.play(audio_source, after = corowrap(voice_client.disconnect()))
             return True
         except Exception as e:
             if voice_client:
