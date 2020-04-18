@@ -104,9 +104,10 @@ class Speech(commands.Cog):
         try:
             voice_client = await channel.connect()
 
-            options = '-filter "volume=volume=0.3" -ac 1'
+            b_options = '-guess_layout_max 0 -v 16'
+            a_options = ''
 
-            audio_source = discord.FFmpegPCMAudio(audio_path, options=options)
+            audio_source = discord.FFmpegPCMAudio(audio_path, options=a_options, before_options=b_options)
             voice_client.play(audio_source, after = corowrap(voice_client.disconnect()))
             return True
         except Exception as e:
