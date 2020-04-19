@@ -71,7 +71,11 @@ class ChannelMod(commands.Cog):
 
     @channelmod.command()
     async def countreactions(self, ctx, message: discord.Message):
-        """Count reactions on a message and all of its mirrors."""
+        """Count reactions on a message and all of its mirrors.
+
+        The message can be a link, a message id (if used in the same
+        channel as the message), or the channel_id and message_id
+        separated by a dash (channel_id-message-id)"""
         mirrored_messages = self.settings.get_mirrored_messages(message.channel.id, message.id)
         if not mirrored_messages:
             await ctx.send("This message isn't mirrored!")

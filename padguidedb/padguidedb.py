@@ -3,6 +3,8 @@ import concurrent.futures
 import json
 import re
 import subprocess
+import io
+import csv
 
 import discord
 import pymysql
@@ -147,19 +149,36 @@ class PadGuideDb(commands.Cog):
     @is_padguidedb_admin()
     async def dungeondrops(self, ctx, dungeon_id: int, dungeon_floor_id: int):
         with self.get_connection() as cursor:
-            sql = ("SELECT stage, drop_monster_id, plus_amount, pull_time, COUNT(*) AS count"
+            sql = ("SELECT stage, drop_monster_id, COUNT(*) AS count"
                    " FROM wave_data"
                    " WHERE dungeon_id = {} AND floor_id = {}"
                    " GROUP BY 1, 2"
                    " ORDER BY 1, 2".format(dungeon_id, dungeon_floor_id))
             cursor.execute(sql)
             results = list(cursor.fetchall())
-            msg = 'stage,drop_monster_id,pluses,time'
+            msg = 'stage,drop_monster_id,count'
             for row in results:
-                print(type(row['pull_time'])) # Please tell me what this outputs!
-                msg += '\n{},{},{},{}'.format(row['stage'], row['drop_monster_id'], row['plus_amount'], row['pull_time'])
+                msg += '\n{},{},{}'.format(row['stage'], row['drop_monster_id'], row['count'])
             for page in pagify(msg):
                 await ctx.send(box(page))
+
+    @padguidedb.command()
+    @is_padguidedb_admin()
+    async def dungeondata(self, ctx, dungeon_id: int):
+        with ctx.typing(), self.get_connection() as cursor:
+            sql = "SELECT * FROM wave_data WHERE dungeon_id = {}".format(dungeon_id)
+            cursor.execute(sql)
+            results = list(cursor.fetchall())
+            order = sorted(results[0])
+            rows = [list(map(lambda x: row[x], order)) for row in results]
+            fauxfile = io.StringIO()
+            writer = csv.writer(fauxfile)
+            writer.writerow(order)
+            writer.writerows(rows)
+            fauxfile.seek(0)
+            m = await ctx.send(file=discord.File(fauxfile, filename="dungeondata.csv"))
+        await asyncio.sleep(10)
+        await m.delete()
 
     @padguidedb.group()
     @is_padguidedb_admin()

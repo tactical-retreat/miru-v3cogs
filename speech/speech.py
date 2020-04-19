@@ -108,7 +108,7 @@ class Speech(commands.Cog):
             a_options = ''
 
             audio_source = discord.FFmpegPCMAudio(audio_path, options=a_options, before_options=b_options)
-            voice_client.play(audio_source, after = corowrap(voice_client.disconnect()))
+            voice_client.play(audio_source, after = corowrap(voice_client.disconnect(), self.bot.loop))
             return True
         except Exception as e:
             if voice_client:

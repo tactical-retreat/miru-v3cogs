@@ -134,20 +134,17 @@ class TimeCog(commands.Cog):
             rmtime = rmtime.astimezone(pytz.utc).replace(tzinfo=None)
             break
         else:
-            for ir in time_in_regeces:
-                match = re.search(ir, time, re.IGNORECASE)
-                if not match: # Only use the first one
-                    raise commands.UserFeedbackCheckFailure("Invalid time string: " + time)
-                tinstrs, input = match.groups()
-                rmtime = datetime.utcnow()
-                try:
-                    rmtime += tin2tdelta(tinstrs)
-                except OverflowError:
-                    raise commands.UserFeedbackCheckFailure(
-                        inline("That's way too far in the future!  Please keep it in your lifespan!"))
-                break
-            else:
+            ir = time_in_regeces[0]
+            match = re.search(ir, time, re.IGNORECASE)
+            if not match: # Only use the first one
                 raise commands.UserFeedbackCheckFailure("Invalid time string: " + time)
+            tinstrs, input = match.groups()
+            rmtime = datetime.utcnow()
+            try:
+                rmtime += tin2tdelta(tinstrs)
+            except OverflowError:
+                raise commands.UserFeedbackCheckFailure(
+                    inline("That's way too far in the future!  Please keep it in your lifespan!"))
 
         if rmtime < (datetime.utcnow() - timedelta(seconds=1)):
             raise commands.UserFeedbackCheckFailure(inline("You can't set a reminder in the past!  If only..."))
