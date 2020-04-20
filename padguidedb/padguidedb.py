@@ -162,7 +162,7 @@ class PadGuideDb(commands.Cog):
             for page in pagify(msg):
                 await ctx.send(box(page))
 
-    @padguidedb.command()
+    #@padguidedb.command()
     @is_padguidedb_admin()
     async def dungeondata(self, ctx, dungeon_id: int):
         with ctx.typing(), self.get_connection() as cursor:
@@ -200,8 +200,6 @@ class PadGuideDb(commands.Cog):
         await ctx.send(inline('Running full ETL pipeline: this could take a while'))
         try:
             await running_load
-        except:
-            pass
         finally:
             self.full_etl_running = False
         await ctx.send(inline('Full ETL finished'))
