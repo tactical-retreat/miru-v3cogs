@@ -185,6 +185,7 @@ class SqlActivityLogger(commands.Cog):
         await ctx.send(inline('Locked is now {}'.format(self.lock)))
 
     @commands.group()
+    @commands.guild_only()
     @checks.mod_or_permissions(manage_guild=True)
     async def exlog(self, context):
         """Extra log querying tools.
@@ -193,7 +194,6 @@ class SqlActivityLogger(commands.Cog):
         """
 
     @exlog.command()
-    @commands.guild_only()
     async def user(self, ctx, user: discord.User, count=10):
         """exlog user "{0.author.name}" 100
 
@@ -265,7 +265,6 @@ class SqlActivityLogger(commands.Cog):
         await self.queryAndPrint(ctx, server, USER_CHANNEL_QUERY, values, column_data)
 
     @exlog.command()
-    @commands.guild_only()
     async def query(self, ctx, query, count=10):
         """exlog query "4 whale" 100
 
