@@ -105,6 +105,9 @@ class ChannelMod(commands.Cog):
 
 
 
+
+
+
     @commands.Cog.listener('on_message')
     async def mirror_msg(self, message):
         if message.author.id == self.bot.user.id:
