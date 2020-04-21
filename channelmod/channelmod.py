@@ -1,4 +1,5 @@
 import io
+import re
 import logging
 import time
 import traceback
@@ -14,6 +15,9 @@ from rpadutils import CogSettings, box
 
 # Three hour cooldown
 ATTRIBUTION_TIME_SECONDS = 60 * 60 * 3
+
+frMESSAGE_LINK = r'(https://discordapp\.com/channels/{0.guild.id}/{0.id}/(\d+)/?)'
+MESSAGE_LINK = 'https://discordapp.com/channels/{0.guild.id}/{0.channel.id}/{0.id}'
 
 
 class ChannelMod(commands.Cog):
@@ -67,7 +71,11 @@ class ChannelMod(commands.Cog):
 
     @channelmod.command()
     async def countreactions(self, ctx, message: discord.Message):
-        """Count reactions on a message and all of its mirrors."""
+        """Count reactions on a message and all of its mirrors.
+
+        The message can be a link, a message id (if used in the same
+        channel as the message), or the channel_id and message_id
+        separated by a dash (channel_id-message-id)"""
         mirrored_messages = self.settings.get_mirrored_messages(message.channel.id, message.id)
         if not mirrored_messages:
             await ctx.send("This message isn't mirrored!")
@@ -102,7 +110,7 @@ class ChannelMod(commands.Cog):
 
     @commands.Cog.listener('on_message')
     async def mirror_msg(self, message):
-        if message.author.id == self.bot.user.id or isinstance(message.channel, discord.abc.PrivateChannel):
+        if message.author.id == self.bot.user.id:
             return
 
         channel = message.channel
@@ -145,14 +153,16 @@ class ChannelMod(commands.Cog):
                     await dest_channel.send(msg)
                     await dest_channel.send(message.jump_url)
 
+                fmessage = await self.mformat(message.content, message.channel, dest_channel)
+
                 if attachment_bytes and filename:
                     dest_message = await dest_channel.send(file=discord.File(attachment_bytes, filename),
-                                                           content=message.content)
+                                                           content=fmessage)
                     attachment_bytes.seek(0)
                 elif message.content:
-                    dest_message = await dest_channel.send(message.content)
+                    dest_message = await dest_channel.send(fmessage)
                 else:
-                    print('Failed to mirror message from ', channel.id, 'no action to take')
+                    print('Failed to mirror message from', channel.id, 'no action to take')
                     continue
 
                 self.settings.add_mirrored_message(
@@ -208,7 +218,8 @@ class ChannelMod(commands.Cog):
                     continue
 
                 if new_message_content:
-                    await dest_message.edit(content=new_message_content)
+                    fcontent = await self.mformat(new_message_content, channel, dest_message.channel)
+                    await dest_message.edit(content=fcontent)
                 elif new_message_reaction:
                     await dest_message.add_reaction(new_message_reaction)
                 elif delete_message_content:
@@ -219,6 +230,25 @@ class ChannelMod(commands.Cog):
                 print('Failed to mirror message edit from ',
                       channel.id, 'to', dest_channel_id, ':', ex)
 
+
+    async def mformat(self, text, from_channel, dest_channel):
+        for link, mid in re.findall(frMESSAGE_LINK.format(from_channel), text):
+            from_link = await from_channel.fetch_message(mid)
+            if not from_link:
+                print('could not locate link to copy')
+                continue
+            mirrored_messages = self.settings.get_mirrored_messages(from_link.channel.id, from_link.id)
+            to_link_id = [dmid for dcid, dmid in mirrored_messages if dcid == dest_channel.id]
+            if not to_link_id:
+                print('could not locate link to mod')
+                continue
+            to_link_id = to_link_id[0]
+            dest_link = await dest_channel.fetch_message(to_link_id)
+
+            newlink = MESSAGE_LINK.format(dest_link)
+            text = text.replace(link, newlink)
+
+        return text
 
 class ChannelModSettings(CogSettings):
     def make_default_settings(self):
@@ -310,8 +340,5 @@ class ChannelModSettings(CogSettings):
 
     def get_mirrored_messages(self, source_channel: int, source_message: str):
         """Returns [(channel_id, message_id), ...]"""
-        channel_config = self.mirrored_channels().get(source_channel, None)
-        if channel_config:
-            return channel_config['messages'].get(source_message, [])
-        else:
-            return []
+        channel_config = self.mirrored_channels().get(source_channel, {})
+        return channel_config.get('messages', {}).get(source_message, [])

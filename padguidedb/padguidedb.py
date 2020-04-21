@@ -3,6 +3,8 @@ import concurrent.futures
 import json
 import re
 import subprocess
+import io
+import csv
 
 import discord
 import pymysql
@@ -68,14 +70,14 @@ class PadGuideDb(commands.Cog):
         self.settings.addAdmin(user.id)
         await ctx.send("done")
 
-    @padguidedb.command(pass_context=True)
+    @padguidedb.command()
     @checks.is_owner()
     async def rmadmin(self, ctx, user: discord.Member):
         """Removes a user from the padguide db admin"""
         self.settings.rmAdmin(user.id)
         await ctx.send("done")
 
-    @padguidedb.command(pass_context=True)
+    @padguidedb.command()
     @checks.is_owner()
     async def setconfigfile(self, ctx, *, config_file):
         """Set the database config file."""
@@ -160,6 +162,24 @@ class PadGuideDb(commands.Cog):
             for page in pagify(msg):
                 await ctx.send(box(page))
 
+    #@padguidedb.command()
+    @is_padguidedb_admin()
+    async def dungeondata(self, ctx, dungeon_id: int):
+        with ctx.typing(), self.get_connection() as cursor:
+            sql = "SELECT * FROM wave_data WHERE dungeon_id = {}".format(dungeon_id)
+            cursor.execute(sql)
+            results = list(cursor.fetchall())
+            order = sorted(results[0])
+            rows = [list(map(lambda x: row[x], order)) for row in results]
+            fauxfile = io.StringIO()
+            writer = csv.writer(fauxfile)
+            writer.writerow(order)
+            writer.writerows(rows)
+            fauxfile.seek(0)
+            m = await ctx.send(file=discord.File(fauxfile, filename="dungeondata.csv"))
+        await asyncio.sleep(10)
+        await m.delete()
+
     @padguidedb.group()
     @is_padguidedb_admin()
     async def pipeline(self, context):
@@ -178,8 +198,10 @@ class PadGuideDb(commands.Cog):
 
         self.full_etl_running = True
         await ctx.send(inline('Running full ETL pipeline: this could take a while'))
-        await running_load
-        self.full_etl_running = False
+        try:
+            await running_load
+        finally:
+            self.full_etl_running = False
         await ctx.send(inline('Full ETL finished'))
 
     def do_full_etl(self):

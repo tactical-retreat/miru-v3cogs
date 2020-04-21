@@ -12,7 +12,7 @@ from rpadutils import CogSettings, corowrap
 
 try:
     if not discord.opus.is_loaded():
-        discord.opus.load_opus('libopus-0.dll')
+        discord.opus.load_opus('libopus.so.0')
 except:  # Missing opus
     print('Failed to load opus')
     opus = None
@@ -96,9 +96,9 @@ class Speech(commands.Cog):
         return False
 
     async def play_path(self, channel, audio_path: str):
-        existing_vc = self.bot.voice_client_in(channel.guild)
+        existing_vc = channel.guild.voice_client
         if existing_vc:
-            await existing_vc.disconnect()
+            await existing_vc.disconnect(force=True)
 
         voice_client = None
         try:
@@ -107,6 +107,8 @@ class Speech(commands.Cog):
             b_options = '-guess_layout_max 0 -v 16'
             a_options = ''
 
+            audio_source = discord.FFmpegPCMAudio(audio_path, options=a_options, before_options=b_options)
+            voice_client.play(audio_source, after = corowrap(voice_client.disconnect(), self.bot.loop))
             return True
         except Exception as e:
             if voice_client:
