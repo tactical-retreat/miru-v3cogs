@@ -149,16 +149,16 @@ class PadGuideDb(commands.Cog):
     @is_padguidedb_admin()
     async def dungeondrops(self, ctx, dungeon_id: int, dungeon_floor_id: int):
         with self.get_connection() as cursor:
-            sql = ("SELECT stage, drop_monster_id, plus_amount, pull_time, COUNT(*) AS count"
+            sql = ("SELECT stage, drop_monster_id, COUNT(*) AS count"
                    " FROM wave_data"
                    " WHERE dungeon_id = {} AND floor_id = {}"
                    " GROUP BY 1, 2"
                    " ORDER BY 1, 2".format(dungeon_id, dungeon_floor_id))
             cursor.execute(sql)
             results = list(cursor.fetchall())
-            msg = 'stage,drop_monster_id,pluses,time'
+            msg = 'stage,drop_monster_id,count'
             for row in results:
-                msg += '\n{},{},{},{}'.format(row['stage'], row['drop_monster_id'], row['plus_amount'], row['pull_time'])
+                msg += '\n{},{},{}'.format(row['stage'], row['drop_monster_id'], row['count'])
             for page in pagify(msg):
                 await ctx.send(box(page))
 
