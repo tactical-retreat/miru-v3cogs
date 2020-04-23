@@ -9,8 +9,6 @@ from redbot.core import checks, Config
 from redbot.core import commands
 from redbot.core.utils.chat_formatting import box, pagify, inline
 
-from rpadutils import rpadutils
-
 HSTRING = """The counter commands are the following:
 {0.prefix}addmoney          Add money to your team's counter.
 {0.prefix}setmoney          Set a team's counter to a specific amount.
@@ -109,7 +107,7 @@ class TCustom(commands.Cog):
     @commands.command()
     @commands.guild_only()
     async def getroleinfo(self, ctx, *, role: discord.Role):
-        await ctx.send(box("Private: {}\nValid: {}".format(await self.config.role(role).private(), 
+        await ctx.send(box("Private: {}\nValid: {}".format(await self.config.role(role).private(),
                                                        await self.config.role(role).valid())))
     @commands.command()
     async def helpmoney(self, ctx):
