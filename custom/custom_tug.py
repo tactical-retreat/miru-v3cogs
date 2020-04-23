@@ -37,6 +37,7 @@ class TCustom(commands.Cog):
             return
         if not await self.config.role(role).valid():
             await ctx.send("That role is not set up for a counter.")
+            return
         if role not in ctx.author.roles and not ctx.channel.permissions_for(ctx.author).administrator:
             await ctx.send("You don't have permission to change that role's counter!")
             return
@@ -62,6 +63,7 @@ class TCustom(commands.Cog):
             return
         if not await self.config.role(role).valid():
             await ctx.send("That role is not set up for a counter.")
+            return
         if role not in ctx.author.roles and not ctx.channel.permissions_for(ctx.author).administrator \
                 and await self.config.role(role).private():
             await ctx.send("You don't have permission to get that role's counter!")
@@ -86,6 +88,7 @@ class TCustom(commands.Cog):
             return
         if not await self.config.role(role).valid():
             await ctx.send("That role is not set up for a counter.")
+            return
         async with self.config.user(ctx.author).drole() as drole:
             drole[ctx.guild.id] = role.id
         await ctx.send(inline("Done"))
