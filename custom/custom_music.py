@@ -9,7 +9,10 @@ from redbot.core import checks, Config
 from redbot.core import commands
 from redbot.core.utils.chat_formatting import box, pagify
 
-from rpadutils import rpadutils
+try:
+    from rpadutils import rpadutils
+except:
+    pass
 
 old_invite = None
 
