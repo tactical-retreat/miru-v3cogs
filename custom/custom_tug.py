@@ -32,9 +32,9 @@ class TCustom(commands.Cog):
     @commands.command()
     @commands.guild_only()
     async def addmoney(self, ctx, amount: int, *, role: discord.Role = None):
-        role = role or ctx.guild.get_role((await self.config.user(ctx.author).drole()).get(ctx.guild.id))
+        role = role or ctx.guild.get_role((await self.config.user(ctx.author).drole()).get(str(ctx.guild.id)))
         if role is None:
-            await ctx.send(("Either you don't have a default role set or your default role has been"
+            await ctx.send(("Either you don't have a default role set or your default role has been "
                             "deleted from this guild.  Set it with {0.prefix}defaultrole.").format(ctx))
             return
         if not await self.config.role(role).valid():
@@ -58,9 +58,9 @@ class TCustom(commands.Cog):
     @commands.command()
     @commands.guild_only()
     async def getmoney(self, ctx, *, role: discord.Role = None):
-        role = role or ctx.guild.get_role((await self.config.user(ctx.author).drole()).get(ctx.guild.id))
+        role = role or ctx.guild.get_role((await self.config.user(ctx.author).drole()).get(str(ctx.guild.id)))
         if role is None:
-            await ctx.send(("Either you don't have a default role set or your default role has been"
+            await ctx.send(("Either you don't have a default role set or your default role has been "
                             "deleted from this guild.  Set it with {0.prefix}defaultrole.").format(ctx))
             return
         if not await self.config.role(role).valid():
@@ -82,7 +82,7 @@ class TCustom(commands.Cog):
         await self.config.role(role).cstr.set(cstr)
         await ctx.send(inline("Done"))
 
-    @commands.command()
+    @commands.command(aliases=["defaultrole"])
     @commands.guild_only()
     async def setdefaultrole(self, ctx, *, role: discord.Role):
         if role not in ctx.author.roles:
