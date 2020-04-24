@@ -15,6 +15,8 @@ HSTRING = """The counter commands are the following:
 {0.prefix}getmoney          Get the value of your team's counter.
 {0.prefix}setcstr           Change the output when changing money. (default is "The counter for {{role}} is {{amount}}.")
 {0.prefix}setdefaultrole    Change your default role.  With a default role set, you don't need to add a role argument to {0.prefix}addmoney and {0.prefix}getmoney
+{0.prefix}setvalid          Sets up or removes the counter for a role.
+{0.prefix}setprivate        Sets whether a non-member of the role can see the counter.
 {0.prefix}helpmoney         Displays this help text.
 """
 
@@ -30,7 +32,7 @@ class TCustom(commands.Cog):
     @commands.command()
     @commands.guild_only()
     async def addmoney(self, ctx, amount: int, *, role: discord.Role = None):
-        role = role or ctx.guild.get_role(await self.config.user(ctx.author).drole().get(ctx.guild.id))
+        role = role or ctx.guild.get_role((await self.config.user(ctx.author).drole()).get(ctx.guild.id))
         if role is None:
             await ctx.send(("Either you don't have a default role set or your default role has been",
                             "deleted from this guild.  Set it with {0.prefix}defaultrole.").format(ctx))
@@ -56,7 +58,7 @@ class TCustom(commands.Cog):
     @commands.command()
     @commands.guild_only()
     async def getmoney(self, ctx, *, role: discord.Role = None):
-        role = role or ctx.guild.get_role(await self.config.user(ctx.author).drole().get(ctx.guild.id))
+        role = role or ctx.guild.get_role((await self.config.user(ctx.author).drole()).get(ctx.guild.id))
         if role is None:
             await ctx.send(("Either you don't have a default role set or your default role has been",
                             "deleted from this guild.  Set it with {0.prefix}defaultrole.").format(ctx))
