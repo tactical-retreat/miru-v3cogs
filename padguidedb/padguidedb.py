@@ -138,7 +138,7 @@ class PadGuideDb(commands.Cog):
         for x in range(queues):
             await running_load
             self.queue_size -= 1
-        await rpadutils.doubleup(ctx, inline('Load for {} {} {} finished'.format(server, dungeon_id, dungeon_floor_id)))
+            await rpadutils.doubleup(ctx, inline('Load for {} {} {} finished'.format(server, dungeon_id, dungeon_floor_id)))
         if self.queue_size == 0:
             await ctx.send("The queue is now empty")
 
