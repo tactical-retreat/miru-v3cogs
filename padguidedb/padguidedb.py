@@ -128,14 +128,15 @@ class PadGuideDb(commands.Cog):
         running_loadf = lambda: event_loop.run_in_executor(
             self.executor, self.do_dungeon_load,
             server.upper(), dungeon_id, dungeon_floor_id)
+        running_load = [running_loadf() for load in range(queues)]
 
         self.queue_size += queues
         if queues == 1:
             await ctx.send(inline('Queued load in slot {}'.format(self.queue_size)))
         else:
             await ctx.send(inline('Queued loads in slots {}-{}'.format(self.queue_size-queues+1, self.queue_size)))
-        for x in range(queues):
-            await running_loadf()
+        while running_load:
+            await running_load.pop()
             await rpadutils.doubleup(ctx, inline('Load for {} {} {} finished'.format(server, dungeon_id, dungeon_floor_id)))
             self.queue_size -= 1
 
@@ -168,6 +169,14 @@ class PadGuideDb(commands.Cog):
                 msg += '\n{},{},{}'.format(row['stage'], row['drop_monster_id'], row['count'])
             for page in pagify(msg):
                 await ctx.send(box(page))
+
+    @padguidedb.command()
+    @checks.is_owner()
+    async def cleardungeon(self, ctx, dungeon_id: int):
+        with self.get_connection() as cursor:
+            sql = "DELETE FROM wave_data WHERE dungeon_id = {}".format(dungeon_id)
+            cursor.execute(sql)
+        await ctx.send(inline("Done"))
 
     #@padguidedb.command()
     @is_padguidedb_admin()
