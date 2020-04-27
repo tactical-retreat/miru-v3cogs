@@ -116,21 +116,31 @@ class PadGuideDb(commands.Cog):
 
     @padguidedb.command()
     @is_padguidedb_admin()
-    async def loaddungeon(self, ctx, server: str, dungeon_id: int, dungeon_floor_id: int):
-        event_loop = asyncio.get_event_loop()
+    async def loaddungeon(self, ctx, server: str, dungeon_id: int, dungeon_floor_id: int, queues: int = 1):
+        if queues > 50:
+            await ctx.send("You must send less than 50 queues.")
+            return
+        elif not self.settings.hasUserInfo(server):
+            await ctx.send("There is no account associated with server '{}'.".format(server.upper()))
+            return
 
+        event_loop = asyncio.get_event_loop()
         running_load = event_loop.run_in_executor(
             self.executor, self.do_dungeon_load,
             server.upper(), dungeon_id, dungeon_floor_id)
 
-        self.queue_size += 1
-        if not self.settings.hasUserInfo(server):
-            await ctx.send("There is no account associated with server '{}'.".format(server.upper()))
-            return
-        await ctx.send(inline('queued load in slot {}'.format(self.queue_size)))
-        await running_load
-        self.queue_size -= 1
-        await rpadutils.doubleup(ctx, inline('load for {} {} {} finished'.format(server, dungeon_id, dungeon_floor_id)))
+
+        self.queue_size += queues
+        if queues == 1:
+            await ctx.send(inline('Queued load in slot {}'.format(self.queue_size)))
+        else:
+            await ctx.send(inline('Queued load in slots {}-{}'.format(self.queue_size, self.queue_size+queues-1)))
+        for x in range(queues):
+            await running_load
+            self.queue_size -= 1
+        await rpadutils.doubleup(ctx, inline('Load for {} {} {} finished'.format(server, dungeon_id, dungeon_floor_id)))
+        if self.queue_size == 0:
+            await ctx.send("The queue is now empty")
 
     def do_dungeon_load(self, server, dungeon_id, dungeon_floor_id):
         args = [
