@@ -117,8 +117,11 @@ class PadGuideDb(commands.Cog):
     @padguidedb.command()
     @is_padguidedb_admin()
     async def loaddungeon(self, ctx, server: str, dungeon_id: int, dungeon_floor_id: int, queues: int = 1):
-        if queues > 50:
-            await ctx.send("You must send less than 50 queues.")
+        if queues > 20:
+            await ctx.send("You must send less than 20 queues.")
+            return
+        elif self.queue_size + queues > 60:
+            await ctx.send("The size of the queue cannot exceed 60.  It is currently {}.".format(self.queue_size))
             return
         elif not self.settings.hasUserInfo(server):
             await ctx.send("There is no account associated with server '{}'.".format(server.upper()))
