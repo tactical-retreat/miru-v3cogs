@@ -144,7 +144,6 @@ class PadGuideDb(commands.Cog):
 
     async def do_dungeon_load(self, ctx, server, dungeon_id, dungeon_floor_id):
         async with self.semaphore:
-            """
             process = asyncio.create_subprocess_exec(
                 sys.executable,
                 self.settings.dungeonScriptFile(),
@@ -159,8 +158,6 @@ class PadGuideDb(commands.Cog):
                 stderr=asyncio.subprocess.PIPE,
             )
             await process.wait(args)
-            """
-            await asyncio.sleep(random.randint(5,10))
             await rpadutils.doubleup(ctx, inline('Load for {} {} {} finished'.format(server, dungeon_id, dungeon_floor_id)))
             self.queue_size -= 1
 
