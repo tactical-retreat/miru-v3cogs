@@ -5,6 +5,10 @@ import re
 import subprocess
 import io
 import csv
+import traceback
+import time
+import sys
+import random
 
 import discord
 import pymysql
@@ -37,9 +41,9 @@ class PadGuideDb(commands.Cog):
 
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         self.queue_size = 0
-        self.full_etl_running = False
-        self.extract_images_running = False
-
+        self.full_etl_lock = asyncio.Lock()
+        self.extract_images_lock = asyncio.Lock()
+        self.semaphore = asyncio.BoundedSemaphore(5)
         global PADGUIDEDB_COG
         PADGUIDEDB_COG = self
 
@@ -124,37 +128,55 @@ class PadGuideDb(commands.Cog):
             await ctx.send("The size of the queue cannot exceed 60.  It is currently {}.".format(self.queue_size))
             return
         elif not self.settings.hasUserInfo(server):
-            await ctx.send("There is no account associated with server '{}'.".format(server.upper()))
-            return
-
-        event_loop = asyncio.get_event_loop()
-        running_loadf = lambda: event_loop.run_in_executor(
-            self.executor, self.do_dungeon_load,
-            server.upper(), dungeon_id, dungeon_floor_id)
-        running_load = [running_loadf() for load in range(queues)]
+            pass
+            #await ctx.send("There is no account associated with server '{}'.".format(server.upper()))
+            #return
 
         self.queue_size += queues
         if queues == 1:
-            await ctx.send(inline('Queued load in slot {}'.format(self.queue_size)))
+            await ctx.send(inline('Queueing load in slot {}'.format(self.queue_size)))
         else:
-            await ctx.send(inline('Queued loads in slots {}-{}'.format(self.queue_size-queues+1, self.queue_size)))
-        while running_load:
-            await running_load.pop()
+            await ctx.send(inline('Queueing loads in slots {}-{}'.format(self.queue_size-queues+1, self.queue_size)))
+
+        event_loop = asyncio.get_event_loop()
+        for queue in range(queues):
+            event_loop.create_task(self.do_dungeon_load(ctx, server.upper(), dungeon_id, dungeon_floor_id))
+
+    async def do_dungeon_load(self, ctx, server, dungeon_id, dungeon_floor_id):
+        async with self.semaphore:
+            """
+            process = asyncio.create_subprocess_exec(
+                sys.executable,
+                self.settings.dungeonScriptFile(),
+                '--db_config={}'.format(self.settings.configFile()),
+                '--server={}'.format(server),
+                '--dungeon_id={}'.format(dungeon_id),
+                '--floor_id={}'.format(dungeon_floor_id),
+                '--user_uuid={}'.format(self.settings.userUuidFor(server)),
+                '--user_intid={}'.format(self.settings.userIntidFor(server)),
+
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            await process.wait(args)
+            """
+            await asyncio.sleep(random.randint(5,10))
             await rpadutils.doubleup(ctx, inline('Load for {} {} {} finished'.format(server, dungeon_id, dungeon_floor_id)))
             self.queue_size -= 1
 
-    def do_dungeon_load(self, server, dungeon_id, dungeon_floor_id):
-        args = [
-            '/usr/bin/python3',
-            self.settings.dungeonScriptFile(),
-            '--db_config={}'.format(self.settings.configFile()),
-            '--server={}'.format(server),
-            '--dungeon_id={}'.format(dungeon_id),
-            '--floor_id={}'.format(dungeon_floor_id),
-            '--user_uuid={}'.format(self.settings.userUuidFor(server)),
-            '--user_intid={}'.format(self.settings.userIntidFor(server)),
-        ]
-        subprocess.run(args)
+    async def queue_manager(self):
+        await self.bot.wait_until_ready()
+
+        while self == self.bot.get_cog('PadGuideDb'):
+            pass
+
+            try:
+                await asyncio.sleep(10)
+            except Exception as ex:
+                print("queue manager loop failed", ex)
+                traceback.print_exc()
+                raise ex
+
 
     @padguidedb.command()
     @is_padguidedb_admin()
@@ -208,19 +230,16 @@ class PadGuideDb(commands.Cog):
     @is_padguidedb_admin()
     async def fulletl(self, ctx):
         """Runs a job which downloads pad data, and updates the padguide database."""
-        if self.full_etl_running:
+        if self.full_etl_lock.locked():
             await ctx.send(inline('Full ETL already running'))
             return
 
         event_loop = asyncio.get_event_loop()
         running_load = event_loop.run_in_executor(self.executor, self.do_full_etl)
 
-        self.full_etl_running = True
-        await ctx.send(inline('Running full ETL pipeline: this could take a while'))
-        try:
+        async with self.full_etl_lock:
+            await ctx.send(inline('Running full ETL pipeline: this could take a while'))
             await running_load
-        finally:
-            self.full_etl_running = False
         await ctx.send(inline('Full ETL finished'))
 
     def do_full_etl(self):
@@ -234,17 +253,16 @@ class PadGuideDb(commands.Cog):
     @is_padguidedb_admin()
     async def extractimages(self, ctx):
         """Runs a job which downloads image updates, generates full images, and portraits."""
-        if self.extract_images_running:
+        if self.extract_images_lock.locked():
             await ctx.send(inline('Extract images already running'))
             return
 
         event_loop = asyncio.get_event_loop()
         running_load = event_loop.run_in_executor(self.executor, self.do_extract_images)
 
-        self.extract_images_running = True
-        await ctx.send(inline('Running image extract pipeline: this could take a while'))
-        await running_load
-        self.extract_images_running = False
+        async with self.extract_images_lock:
+            await ctx.send(inline('Running image extract pipeline: this could take a while'))
+            await running_load
         await ctx.send(inline('Image extract finished'))
 
     def do_extract_images(self):
