@@ -136,7 +136,7 @@ class PadGuideDb(commands.Cog):
 
     async def do_dungeon_load(self, ctx, server, dungeon_id, dungeon_floor_id):
         async with self.semaphore:
-            process = asyncio.create_subprocess_exec(
+            process = await asyncio.create_subprocess_exec(
                 sys.executable,
                 self.settings.dungeonScriptFile(),
                 '--db_config={}'.format(self.settings.configFile()),
@@ -149,7 +149,7 @@ class PadGuideDb(commands.Cog):
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            await process.wait(args)
+            await process.wait()
             await rpadutils.doubleup(ctx, inline('Load for {} {} {} finished'.format(server, dungeon_id, dungeon_floor_id)))
             self.queue_size -= 1
 
@@ -212,14 +212,14 @@ class PadGuideDb(commands.Cog):
 
         async with self.full_etl_lock:
             await ctx.send(inline('Running full ETL pipeline: this could take a while'))
-            process = asyncio.create_subprocess_exec(
+            process = await asyncio.create_subprocess_exec(
                 'bash',
                 '/home/tactical0retreat/dadguide/dadguide-jobs/run_loader.sh',
 
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            await process.wait(args)
+            await process.wait()
         await ctx.send(inline('Full ETL finished'))
 
     @pipeline.command()
@@ -232,14 +232,14 @@ class PadGuideDb(commands.Cog):
 
         async with self.extract_images_lock:
             await ctx.send(inline('Running image extract pipeline: this could take a while'))
-            process = asyncio.create_subprocess_exec(
+            process = await asyncio.create_subprocess_exec(
                 'bash',
                 '/home/tactical0retreat/dadguide/dadguide-jobs/media/update_image_files.sh',
 
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            await process.wait(args)
+            await process.wait()
         await ctx.send(inline('Image extract finished'))
 
 
