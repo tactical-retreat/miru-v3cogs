@@ -1,14 +1,10 @@
 import asyncio
-import concurrent.futures
 import json
 import re
 import subprocess
 import io
 import csv
-import traceback
-import time
 import sys
-import random
 
 import discord
 import pymysql
@@ -39,7 +35,6 @@ class PadGuideDb(commands.Cog):
         self.bot = bot
         self.settings = PadGuideDbSettings("padguidedb")
 
-        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         self.queue_size = 0
         self.full_etl_lock = asyncio.Lock()
         self.extract_images_lock = asyncio.Lock()
@@ -48,10 +43,7 @@ class PadGuideDb(commands.Cog):
         PADGUIDEDB_COG = self
 
     def get_connection(self):
-        with open(self.settings.configFile(), 'a+') as f:
-            f.seek(0)
-            db_config = json.load(f)
-        return self.connect(db_config)
+        return self.connect(json.load(open(self.settings.configFile(), 'r')))
 
     def connect(self, db_config):
         return pymysql.connect(host=db_config['host'],
@@ -161,19 +153,6 @@ class PadGuideDb(commands.Cog):
             await rpadutils.doubleup(ctx, inline('Load for {} {} {} finished'.format(server, dungeon_id, dungeon_floor_id)))
             self.queue_size -= 1
 
-    async def queue_manager(self):
-        await self.bot.wait_until_ready()
-
-        while self == self.bot.get_cog('PadGuideDb'):
-            pass
-
-            try:
-                await asyncio.sleep(10)
-            except Exception as ex:
-                print("queue manager loop failed", ex)
-                traceback.print_exc()
-                raise ex
-
 
     @padguidedb.command()
     @is_padguidedb_admin()
@@ -231,20 +210,17 @@ class PadGuideDb(commands.Cog):
             await ctx.send(inline('Full ETL already running'))
             return
 
-        event_loop = asyncio.get_event_loop()
-        running_load = event_loop.run_in_executor(self.executor, self.do_full_etl)
-
         async with self.full_etl_lock:
             await ctx.send(inline('Running full ETL pipeline: this could take a while'))
-            await running_load
-        await ctx.send(inline('Full ETL finished'))
+            process = asyncio.create_subprocess_exec(
+                'bash',
+                '/home/tactical0retreat/dadguide/dadguide-jobs/run_loader.sh',
 
-    def do_full_etl(self):
-        args = [
-            'bash',
-            '/home/tactical0retreat/dadguide/dadguide-jobs/run_loader.sh',
-        ]
-        subprocess.run(args)
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            await process.wait(args)
+        await ctx.send(inline('Full ETL finished'))
 
     @pipeline.command()
     @is_padguidedb_admin()
@@ -254,20 +230,18 @@ class PadGuideDb(commands.Cog):
             await ctx.send(inline('Extract images already running'))
             return
 
-        event_loop = asyncio.get_event_loop()
-        running_load = event_loop.run_in_executor(self.executor, self.do_extract_images)
-
         async with self.extract_images_lock:
             await ctx.send(inline('Running image extract pipeline: this could take a while'))
-            await running_load
+            process = asyncio.create_subprocess_exec(
+                'bash',
+                '/home/tactical0retreat/dadguide/dadguide-jobs/media/update_image_files.sh',
+
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            await process.wait(args)
         await ctx.send(inline('Image extract finished'))
 
-    def do_extract_images(self):
-        args = [
-            'bash',
-            '/home/tactical0retreat/dadguide/dadguide-jobs/media/update_image_files.sh',
-        ]
-        subprocess.run(args)
 
 
 class PadGuideDbSettings(CogSettings):
