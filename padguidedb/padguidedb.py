@@ -38,7 +38,7 @@ class PadGuideDb(commands.Cog):
         self.queue_size = 0
         self.full_etl_lock = asyncio.Lock()
         self.extract_images_lock = asyncio.Lock()
-        self.semaphore = asyncio.BoundedSemaphore(5)
+        self.dungeon_load_lock = asyncio.Lock()
         global PADGUIDEDB_COG
         PADGUIDEDB_COG = self
 
@@ -135,7 +135,7 @@ class PadGuideDb(commands.Cog):
             event_loop.create_task(self.do_dungeon_load(ctx, server.upper(), dungeon_id, dungeon_floor_id))
 
     async def do_dungeon_load(self, ctx, server, dungeon_id, dungeon_floor_id):
-        async with self.semaphore:
+        async with self.dungeon_load_lock:
             process = await asyncio.create_subprocess_exec(
                 sys.executable,
                 self.settings.dungeonScriptFile(),
