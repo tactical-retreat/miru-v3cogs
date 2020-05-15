@@ -43,7 +43,8 @@ class PadGuideDb(commands.Cog):
         PADGUIDEDB_COG = self
 
     def get_connection(self):
-        return self.connect(json.load(open(self.settings.configFile(), 'r')))
+        with open(self.settings.configFile(), 'r') as db_config:
+            return self.connect(json.load(db_config))
 
     def connect(self, db_config):
         return pymysql.connect(host=db_config['host'],
@@ -113,16 +114,15 @@ class PadGuideDb(commands.Cog):
     @padguidedb.command()
     @is_padguidedb_admin()
     async def loaddungeon(self, ctx, server: str, dungeon_id: int, dungeon_floor_id: int, queues: int = 1):
-        if queues > 20:
-            await ctx.send("You must send less than 20 queues.")
+        if queues > 5:
+            await ctx.send("You must send less than 5 queues.")
             return
         elif self.queue_size + queues > 60:
             await ctx.send("The size of the queue cannot exceed 60.  It is currently {}.".format(self.queue_size))
             return
         elif not self.settings.hasUserInfo(server):
-            pass
-            #await ctx.send("There is no account associated with server '{}'.".format(server.upper()))
-            #return
+            await ctx.send("There is no account associated with server '{}'.".format(server.upper()))
+            return
 
         self.queue_size += queues
         if queues == 1:
