@@ -17,6 +17,7 @@ from rpadutils import CogSettings, rpadutils
 
 PADGUIDEDB_COG = None
 
+sys.executable = "/usr/bin/python3"
 
 def is_padguidedb_admin_check(ctx):
     is_owner = PADGUIDEDB_COG.bot.owner_id == ctx.author.id
