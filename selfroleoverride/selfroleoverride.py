@@ -8,7 +8,7 @@ from redbot.core import checks, Config
 from redbot.core import commands
 from redbot.core.utils.chat_formatting import box, pagify
 
-class SelfRoleOverride(commands.Converter):
+class SelfRoleConverterOverride(commands.Converter):
     async def convert(self, ctx: commands.Context, arg: str) -> discord.Role:
         admin = ctx.command.cog.bot.get_cog("Admin")
         if admin is None:
@@ -39,7 +39,7 @@ class SelfRoleOverride(commands.Converter):
             raise commands.BadArgument("The provided role is not a valid selfrole.")
         return role
 
-class Override(commands.Cog):
+class SelfRoleOverride(commands.Cog):
     """Overrides of builtin commands"""
 
     def __init__(self, bot, *args, **kwargs):
@@ -69,7 +69,7 @@ class Override(commands.Cog):
         pass
 
     @selfrole.command(name="add")
-    async def selfrole_add(self, ctx: commands.Context, *, selfrole: SelfRoleOverride):
+    async def selfrole_add(self, ctx: commands.Context, *, selfrole: SelfRoleConverterOverride):
         """
         Add a selfrole to yourself.
 
@@ -78,11 +78,11 @@ class Override(commands.Cog):
         self = self.bot.get_cog("Admin")
         if self is None:
             await ctx.send("Admin cog not loaded.")
-            
+
         await self._addrole(ctx, ctx.author, selfrole, check_user=False)
 
     @selfrole.command(name="remove")
-    async def selfrole_remove(self, ctx: commands.Context, *, selfrole: SelfRoleOverride):
+    async def selfrole_remove(self, ctx: commands.Context, *, selfrole: SelfRoleConverterOverride):
         """
         Remove a selfrole from yourself.
 
