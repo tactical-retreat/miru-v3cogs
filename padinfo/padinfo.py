@@ -4,7 +4,6 @@ import os
 import traceback
 import urllib.parse
 from collections import OrderedDict
-from enum import Enum
 
 import discord
 import prettytable
@@ -50,11 +49,6 @@ ORB_SKIN_CB_TEMPLATE = MEDIA_PATH + 'orb_skins/{0:03d}cb.png'
 
 YT_SEARCH_TEMPLATE = 'https://www.youtube.com/results?search_query={}'
 SKYOZORA_TEMPLATE = 'http://pad.skyozora.com/pets/{}'
-
-class ServerFilter(Enum):
-    any = 0
-    na = 1
-    jp = 2
 
 
 def get_pdx_url(m):
@@ -128,8 +122,6 @@ class PadInfo(commands.Cog):
 
         self.index_all = None
         self.index_na = None
-        self.index_jp = None
-
 
         self.menu = Menu(bot)
 
@@ -158,7 +150,6 @@ class PadInfo(commands.Cog):
         # Manually nulling out database because the GC for cogs seems to be pretty shitty
         self.index_all = None
         self.index_na = None
-        self.index_jp = None
         self.historic_lookups = {}
         self.historic_lookups_id2 = {}
 
@@ -185,7 +176,6 @@ class PadInfo(commands.Cog):
         await dg_cog.wait_until_ready()
         self.index_all = dg_cog.create_index()
         self.index_na = dg_cog.create_index(lambda m: m.on_na)
-        self.index_jp = dg_cog.create_index(lambda m: m.on_jp)
 
     def get_monster_by_id(self, monster_id: int):
         dg_cog = self.bot.get_cog('Dadguide')
@@ -211,15 +201,10 @@ class PadInfo(commands.Cog):
     @commands.command()
     async def idna(self, ctx, *, query: str):
         """Monster info (limited to NA monsters ONLY)"""
-        await self._do_id(ctx, query, server_filter=ServerFilter.na)
+        await self._do_id(ctx, query, na_only=True)
 
-    @commands.command()
-    async def idjp(self, ctx, *, query: str):
-        """Monster info (limited to JP monsters ONLY)"""
-        await self._do_id(ctx, query, server_filter=ServerFilter.jp)
-
-    async def _do_id(self, ctx, query: str, server_filter=ServerFilter.any):
-        m, err, debug_info = self.findMonster(query, server_filter=server_filter)
+    async def _do_id(self, ctx, query: str, na_only=False):
+        m, err, debug_info = self.findMonster(query, na_only=na_only)
         if m is not None:
             await self._do_idmenu(ctx, m, self.id_emoji)
         else:
@@ -233,15 +218,10 @@ class PadInfo(commands.Cog):
     @commands.command()
     async def id2na(self, ctx, *, query: str):
         """Monster info (limited to NA monsters ONLY)"""
-        await self._do_id2(ctx, query, server_filter=ServerFilter.na)
+        await self._do_id2(ctx, query, na_only=True)
 
-    @commands.command()
-    async def id2jp(self, ctx, *, query: str):
-        """Monster info (limited to JP monsters ONLY)"""
-        await self._do_id2(ctx, query, server_filter=ServerFilter.jp)
-
-    async def _do_id2(self, ctx, query: str, server_filter=ServerFilter.any):
-        m, err, debug_info = self.findMonster2(query, server_filter=server_filter)
+    async def _do_id2(self, ctx, query: str, na_only=False):
+        m, err, debug_info = self.findMonster2(query, na_only=na_only)
         if m is not None:
             await self._do_idmenu(ctx, m, self.id_emoji)
         else:
@@ -538,12 +518,12 @@ class PadInfo(commands.Cog):
     def makeFailureMsg(self, err):
         msg = ('Lookup failed: {}.\n'
                'Try one of <id>, <name>, [argbld]/[rgbld] <name>. '
-               'Unexpected results? Use ^helpid for more info.').format(err)
+               'Unexpected results? Use {}helpid for more info.').format(err, (await self.bot.get_valid_prefixes())[0])
         return box(msg)
 
-    def findMonster(self, query, server_filter=ServerFilter.any):
+    def findMonster(self, query, na_only=False):
         query = rmdiacritics(query)
-        nm, err, debug_info = self._findMonster(query, server_filter)
+        nm, err, debug_info = self._findMonster(query, na_only)
 
         monster_no = nm.monster_id if nm else -1
         self.historic_lookups[query] = monster_no
@@ -553,20 +533,13 @@ class PadInfo(commands.Cog):
 
         return m, err, debug_info
 
-    def _findMonster(self, query, server_filter=ServerFilter.any):
-        if server_filter == ServerFilter.any:
-            monster_index = self.index_all
-        elif server_filter == ServerFilter.na:
-            monster_index = self.index_na
-        elif server_filter == ServerFilter.jp:
-            monster_index = self.index_jp
-        else:
-            raise ValueError("server_filter must be type ServerFilter not " + str(type(server_filter)))
+    def _findMonster(self, query, na_only=False):
+        monster_index = self.index_na if na_only else self.index_all
         return monster_index.find_monster(query)
 
-    def findMonster2(self, query, server_filter=ServerFilter.any):
+    def findMonster2(self, query, na_only=False):
         query = rmdiacritics(query)
-        nm, err, debug_info = self._findMonster2(query, server_filter)
+        nm, err, debug_info = self._findMonster2(query, na_only)
 
         monster_no = nm.monster_id if nm else -1
         self.historic_lookups_id2[query] = monster_no
@@ -576,15 +549,8 @@ class PadInfo(commands.Cog):
 
         return m, err, debug_info
 
-    def _findMonster2(self, query, server_filter=ServerFilter.any):
-        if server_filter == ServerFilter.any:
-            monster_index = self.index_all
-        elif server_filter == ServerFilter.na:
-            monster_index = self.index_na
-        elif server_filter == ServerFilter.jp:
-            monster_index = self.index_jp
-        else:
-            raise ValueError("server_filter must be type ServerFilter not " + str(type(server_filter)))
+    def _findMonster2(self, query, na_only=False):
+        monster_index = self.index_na if na_only else self.index_all
         return monster_index.find_monster2(query)
 
 
