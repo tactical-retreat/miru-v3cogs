@@ -280,8 +280,8 @@ class ChannelMod(commands.Cog):
                 continue
             text = text.replace(ctext, "\\#"+target.name)
         #EVERYONE
-        text = re.sub(r"\s*@everyone\b\s*", "", text)
-        text = re.sub(r"\s*@here\b\s*", "", text)
+        text = re.sub(r"@everyone\b", "@\u200beveryone", text)
+        text = re.sub(r"@here\b", "@\u200bhere", text)
         return text
 
 class ChannelModSettings(CogSettings):
